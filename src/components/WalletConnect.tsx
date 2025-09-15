@@ -1,47 +1,30 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, Shield, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useWallet, WALLET_TYPES } from '@/hooks/useWallet';
 import { useToast } from '@/hooks/use-toast';
+import { NetworkSelector } from '@/components/NetworkSelector';
+import { CurrencySelector } from '@/components/CurrencySelector';
+import { Wallet, LogOut, Loader2, CheckCircle, Settings } from 'lucide-react';
 
-// Extend Window interface for Stellar wallet extensions
-declare global {
-  interface Window {
-    freighter?: any;
-  }
-}
-
-export const WalletConnect = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { address, isConnected, isLoading, error, connect, disconnect } = useWallet();
+export const WalletConnect: React.FC = () => {
+  const { address, isConnected, isLoading, network, connect, disconnect, switchNetwork } = useWallet();
   const { toast } = useToast();
-
-  const walletOptions = [
-    {
-      ...WALLET_TYPES.FREIGHTER,
-      icon: Wallet,
-      available: typeof window !== 'undefined' && !!window.freighter,
-    },
-    {
-      ...WALLET_TYPES.LOBSTR,
-      icon: Shield,
-      available: true,
-    },
-    {
-      ...WALLET_TYPES.RABET,
-      icon: Sparkles,
-      available: true,
-    },
-  ];
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>('USD');
 
   const handleConnect = async (walletId: string) => {
     try {
       await connect(walletId);
-      setIsOpen(false);
+      setIsDialogOpen(false);
       toast({
         title: "Wallet Connected",
         description: "Successfully connected to your Stellar wallet",
@@ -63,72 +46,109 @@ export const WalletConnect = () => {
     });
   };
 
-  if (isConnected) {
+  // Connected state
+  if (isConnected && address) {
     return (
       <div className="flex items-center gap-3">
-        <Badge variant="outline" className="bg-gradient-stellar text-primary-foreground border-0">
-          <CheckCircle className="mr-1 h-3 w-3" />
-          {address?.slice(0, 4)}...{address?.slice(-4)}
+        <NetworkSelector 
+          currentNetwork={network} 
+          onNetworkChange={switchNetwork}
+          disabled={isLoading}
+        />
+        
+        <CurrencySelector 
+          currentCurrency={currency}
+          onCurrencyChange={setCurrency}
+          compact
+        />
+        
+        <Badge variant="outline" className="flex items-center gap-2 px-3 py-1">
+          <CheckCircle className="h-4 w-4 text-success" />
+          <span className="font-mono text-sm">
+            {`${address.slice(0, 4)}...${address.slice(-4)}`}
+          </span>
         </Badge>
-        <Button 
-          variant="outline" 
+        
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleDisconnect}
-          className="text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-2"
         >
+          <LogOut className="h-4 w-4" />
           Disconnect
         </Button>
       </div>
     );
   }
 
+  // Disconnected state
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="bg-gradient-stellar text-primary-foreground border-0 glow-stellar hover:shadow-stellar transition-all duration-300">
-          <Wallet className="mr-2 h-4 w-4" />
-          Connect Wallet
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="glass">
-        <DialogHeader>
-          <DialogTitle className="text-2xl bg-gradient-stellar bg-clip-text text-transparent">
-            Connect Your Stellar Wallet
-          </DialogTitle>
-          <DialogDescription>
-            Choose your preferred Stellar wallet to connect to Tansu Vault
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex items-center gap-3">
+      <NetworkSelector 
+        currentNetwork={network} 
+        onNetworkChange={switchNetwork}
+        disabled={isLoading}
+      />
+      
+      <CurrencySelector 
+        currentCurrency={currency}
+        onCurrencyChange={setCurrency}
+        compact
+      />
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button className="flex items-center gap-2">
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wallet className="h-4 w-4" />
+            )}
+            Connect Wallet
+          </Button>
+        </DialogTrigger>
         
-        <div className="grid gap-4 mt-4">
-          {walletOptions.map((wallet) => (
-            <Card 
-              key={wallet.name}
-              className={cn(
-                "cursor-pointer transition-all duration-300 hover:shadow-elevation border-border/50",
-                wallet.available ? "hover:bg-surface-elevated" : "opacity-50 cursor-not-allowed"
-              )}
-              onClick={() => wallet.available && handleConnect(wallet.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-stellar">
-                    <wallet.icon className="h-5 w-5 text-primary-foreground" />
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Your Wallet</DialogTitle>
+            <DialogDescription>
+              Choose a wallet to connect to Tansu Vault on {network}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 mt-4">
+            {Object.values(WALLET_TYPES).map((wallet) => {
+              const isFreighterAvailable = wallet.id === 'freighter' ? typeof window !== 'undefined' && (window as any).freighter : true;
+              
+              return (
+                <Button
+                  key={wallet.id}
+                  variant="outline"
+                  className="flex items-center justify-start gap-3 h-auto p-4"
+                  onClick={() => handleConnect(wallet.id)}
+                  disabled={!isFreighterAvailable || isLoading}
+                >
+                  <div className="flex-1 text-left">
+                    <div className="font-medium">{wallet.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {wallet.description}
+                    </div>
+                    {!isFreighterAvailable && wallet.id === 'freighter' && (
+                      <div className="text-xs text-destructive mt-1">
+                        Extension not detected
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{wallet.name}</CardTitle>
-                    <CardDescription>{wallet.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-        
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          Make sure you're on the Stellar network before connecting
-        </p>
-      </DialogContent>
-    </Dialog>
+                  {isLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };

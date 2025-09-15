@@ -14,41 +14,88 @@ import {
   TransactionBuilder,
   Account,
   Asset,
-  Contract,
-  Address,
-  nativeToScVal,
-  scValToNative,
-  Soroban
+  BASE_FEE,
+  TimeoutInfinite,
+  xdr as StellarXDR,
 } from '@stellar/stellar-sdk';
+import testnetContracts from '@/config/testnet.contracts.json';
 
 // Network configuration
-export const NETWORK_PASSPHRASE = Networks.TESTNET;
-export const HORIZON_URL = 'https://horizon-testnet.stellar.org';
-export const RPC_URL = 'https://soroban-testnet.stellar.org';
+export const NETWORKS = {
+  TESTNET: 'TESTNET' as const,
+  MAINNET: 'MAINNET' as const,
+} as const;
 
-// DeFindex contract addresses from paltalabs/defindex testnet.contracts.json
-export const DEFINDEX_CONTRACTS = {
-  factory: 'CD6MEVYGXCCUTOUIC3GNMIDOSRY4A2WGCRQGOOCVG5PK2N7UNGGU6BBQ',
-  xlm_hodl_vault: 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP',
-  vault_hash: 'ae3409a4090bc087b86b4e9b444d2b8017ccd97b90b069d44d005ab9f8e1468b'
-};
+export type NetworkType = keyof typeof NETWORKS;
 
-// Initialize Stellar services
-export const horizonServer = new Horizon.Server(HORIZON_URL);
+export const NETWORK_DETAILS = {
+  TESTNET: {
+    network: Networks.TESTNET,
+    horizonUrl: 'https://horizon-testnet.stellar.org',
+    rpcUrl: 'https://soroban-testnet.stellar.org',
+    walletNetwork: WalletNetwork.TESTNET,
+  },
+  MAINNET: {
+    network: Networks.PUBLIC,
+    horizonUrl: 'https://horizon.stellar.org',  
+    rpcUrl: 'https://soroban.stellar.org',
+    walletNetwork: WalletNetwork.PUBLIC,
+  },
+} as const;
 
-// Wallet Kit instance
+// Current network state
+let currentNetwork: NetworkType = 'TESTNET';
+let horizonServer: Horizon.Server;
 let walletKit: StellarWalletsKit | null = null;
 
-export const initWalletKit = () => {
-  if (!walletKit) {
+// Initialize network-dependent services
+const initializeNetwork = (network: NetworkType) => {
+  currentNetwork = network;
+  horizonServer = new Horizon.Server(NETWORK_DETAILS[network].horizonUrl);
+};
+
+// Initialize with testnet by default
+initializeNetwork('TESTNET');
+
+// Contract addresses based on network
+export const getContractAddresses = () => {
+  if (currentNetwork === 'TESTNET') {
+    return {
+      DEFINDEX_FACTORY: testnetContracts.ids.defindex_factory,
+      XLM_HODL_VAULT: testnetContracts.ids.xlm_hodl_vault,
+      VAULT_HASH: testnetContracts.hashes.defindex_vault,
+    };
+  }
+  // Add mainnet contracts when available
+  return {
+    DEFINDEX_FACTORY: '',
+    XLM_HODL_VAULT: '',
+    VAULT_HASH: '',
+  };
+};
+
+export const initWalletKit = (network: NetworkType = 'TESTNET') => {
+  const networkConfig = NETWORK_DETAILS[network];
+  
+  if (!walletKit || currentNetwork !== network) {
+    initializeNetwork(network);
     walletKit = new StellarWalletsKit({
-      network: WalletNetwork.TESTNET,
+      network: networkConfig.walletNetwork,
       selectedWalletId: FREIGHTER_ID,
       modules: allowAllModules()
     });
   }
   return walletKit;
 };
+
+export const switchNetwork = (network: NetworkType) => {
+  initializeNetwork(network);
+  walletKit = null; // Force re-initialization on next use
+  return initWalletKit(network);
+};
+
+export const getCurrentNetwork = () => currentNetwork;
+export const getHorizonServer = () => horizonServer;
 
 export const getWalletKit = () => {
   if (!walletKit) {
@@ -74,24 +121,32 @@ export const getWalletAddress = async () => {
 export const signTransaction = async (xdr: string) => {
   const kit = getWalletKit();
   const { signedTxXdr } = await kit.signTransaction(xdr, {
-    networkPassphrase: NETWORK_PASSPHRASE
+    networkPassphrase: NETWORK_DETAILS[currentNetwork].network
   });
   return signedTxXdr;
 };
 
 // Account utilities
 export const loadAccount = async (address: string): Promise<Account> => {
-  const account = await horizonServer.loadAccount(address);
-  return account;
+  try {
+    return await getHorizonServer().loadAccount(address);
+  } catch (error) {
+    console.error('Failed to load account:', error);
+    throw new Error('Account not found or network error');
+  }
 };
 
-export const getAccountBalances = async (address: string) => {
-  const accountResponse = await horizonServer.loadAccount(address);
-  return accountResponse.balances;
+export const getAccountBalances = async (address: string): Promise<any[]> => {
+  try {
+    const account = await getHorizonServer().loadAccount(address);
+    return account.balances;
+  } catch (error) {
+    console.error('Failed to get account balances:', error);
+    throw new Error('Failed to fetch account balances');
+  }
 };
 
-// Asset utilities
-export const getAssetBalance = async (address: string, asset: Asset) => {
+export const getAssetBalance = async (address: string, asset: Asset): Promise<number> => {
   const balances = await getAccountBalances(address);
   const balance = balances.find(b => {
     if (asset.isNative()) {
@@ -104,113 +159,133 @@ export const getAssetBalance = async (address: string, asset: Asset) => {
   return balance ? parseFloat(balance.balance) : 0;
 };
 
-// Contract interaction utilities
-export const buildContractTransaction = async (
-  sourceAccount: string,
+// Helper function to build contract transactions
+const buildContractTransaction = async (
+  userAddress: string,
   contractAddress: string,
   method: string,
-  params: any[]
-) => {
-  const account = await loadAccount(sourceAccount);
-  const contract = new Contract(contractAddress);
+  args: any[] = []
+): Promise<string> => {
+  const account = await loadAccount(userAddress);
+  const networkPassphrase = NETWORK_DETAILS[currentNetwork].network;
   
-  const operation = contract.call(
-    method,
-    ...params.map(param => nativeToScVal(param))
-  );
-
-  return new TransactionBuilder(account, {
-    fee: '100000',
-    networkPassphrase: NETWORK_PASSPHRASE
+  const transaction = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase,
   })
-    .addOperation(operation)
-    .setTimeout(30)
+    .addOperation(
+      Operation.invokeContract({
+        contract: contractAddress,
+        function: method,
+        args: args,
+      })
+    )
+    .setTimeout(TimeoutInfinite)
     .build();
+
+  return transaction.toXDR();
 };
 
-// DeFindex vault operations
-export const depositToVault = async (
-  userAddress: string,
-  amount: string,
-  asset: Asset
-) => {
-  const contract = new Contract(DEFINDEX_CONTRACTS.xlm_hodl_vault);
-  const params = [
-    Address.fromString(userAddress),
-    nativeToScVal(amount, { type: 'i128' }),
-    // Asset parameter for vault
-  ];
-
-  const transaction = await buildContractTransaction(
-    userAddress,
-    DEFINDEX_CONTRACTS.xlm_hodl_vault,
-    'deposit',
-    params
-  );
-
-  const xdr = transaction.toXDR();
-  const signedXDR = await signTransaction(xdr);
-  const signedTransaction = TransactionBuilder.fromXDR(signedXDR, NETWORK_PASSPHRASE);
-  
-  return horizonServer.submitTransaction(signedTransaction);
-};
-
-export const withdrawFromVault = async (
-  userAddress: string,
-  amount: string
-) => {
-  const contract = new Contract(DEFINDEX_CONTRACTS.xlm_hodl_vault);
-  const params = [
-    Address.fromString(userAddress),
-    nativeToScVal(amount, { type: 'i128' })
-  ];
-
-  const transaction = await buildContractTransaction(
-    userAddress,
-    DEFINDEX_CONTRACTS.xlm_hodl_vault,
-    'withdraw',
-    params
-  );
-
-  const xdr = transaction.toXDR();
-  const signedXDR = await signTransaction(xdr);
-  const signedTransaction = TransactionBuilder.fromXDR(signedXDR, NETWORK_PASSPHRASE);
-  
-  return horizonServer.submitTransaction(signedTransaction);
-};
-
-export const getVaultBalance = async (userAddress: string) => {
-  // Implementation for reading vault balance from contract
-  // This would use Soroban RPC to call a read-only method
-  const contract = new Contract(DEFINDEX_CONTRACTS.xlm_hodl_vault);
-  // TODO: Implement RPC call to get user's vault balance
-  return '0';
-};
-
-// Price fetching from Reflector Network (following Stellar-Stratum pattern)
-export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD') => {
+export const depositToVault = async (userAddress: string, amount: string): Promise<string> => {
   try {
-    // Using Reflector Network for price data (pattern from Stellar-Stratum)
-    const response = await fetch(`https://api.reflector.network/v1/price/${assetCode}/${currency}`);
-    const data = await response.json();
-    return data.price || 0;
+    const contracts = getContractAddresses();
+    
+    // Build transaction for vault deposit
+    const xdr = await buildContractTransaction(
+      userAddress,
+      contracts.XLM_HODL_VAULT,
+      'deposit',
+      [
+        // Add proper arguments for deposit method
+        // Amount in stroops (1 XLM = 10,000,000 stroops)
+        xdr.ScVal.scvI128(xdr.Int128Parts.fromString((parseFloat(amount) * 10_000_000).toString())),
+      ]
+    );
+
+    // Sign and submit transaction
+    const signedXdr = await signTransaction(xdr);
+    const transaction = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
+    const result = await getHorizonServer().submitTransaction(transaction);
+    
+    return result.hash;
   } catch (error) {
-    console.error('Error fetching asset price:', error);
-    return 0;
+    console.error('Deposit failed:', error);
+    throw new Error(`Deposit failed: ${error}`);
   }
 };
 
-// Format currency values
-export const formatCurrency = (amount: number, currency: string = 'USD') => {
+export const withdrawFromVault = async (userAddress: string, amount: string): Promise<string> => {
+  try {
+    const contracts = getContractAddresses();
+    
+    // Build transaction for vault withdrawal
+    const xdr = await buildContractTransaction(
+      userAddress,
+      contracts.XLM_HODL_VAULT,
+      'withdraw',
+      [
+        // Add proper arguments for withdraw method
+        xdr.ScVal.scvI128(xdr.Int128Parts.fromString((parseFloat(amount) * 10_000_000).toString())),
+      ]
+    );
+
+    // Sign and submit transaction
+    const signedXdr = await signTransaction(xdr);
+    const transaction = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
+    const result = await getHorizonServer().submitTransaction(transaction);
+    
+    return result.hash;
+  } catch (error) {
+    console.error('Withdrawal failed:', error);
+    throw new Error(`Withdrawal failed: ${error}`);
+  }
+};
+
+export const getVaultBalance = async (userAddress: string): Promise<string> => {
+  // TODO: Implement actual vault balance fetching from contract
+  // For now, return placeholder
+  return "0";
+};
+
+// Pricing utilities using Reflector Network
+export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD'): Promise<number> => {
+  try {
+    // Use Reflector Network oracles - follows Stellar-Stratum pattern
+    const oracle = `${assetCode}${currency}`;
+    const response = await fetch(`https://api.reflector.network/v1/oracle/${oracle}/latest`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${assetCode} price in ${currency}`);
+    }
+    
+    const data = await response.json();
+    return data.value ? parseFloat(data.value) : 0;
+  } catch (error) {
+    console.error(`Error fetching ${assetCode} price:`, error);
+    
+    // Fallback prices for development
+    const fallbackPrices: Record<string, number> = {
+      XLMUSD: 0.12,
+      USDCUSD: 1.00,
+      XLMEUR: 0.11,
+      USDCEUR: 0.92,
+      XLMGBP: 0.095,
+      USDCGBP: 0.79,
+    };
+    
+    const key = `${assetCode}${currency}`.toUpperCase();
+    return fallbackPrices[key] || 0;
+  }
+};
+
+export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
   }).format(amount);
 };
 
-export const formatAssetAmount = (amount: string | number, decimals: number = 7) => {
+export const formatAssetAmount = (amount: string | number, decimals: number = 7): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return num.toFixed(decimals).replace(/\.?0+$/, '');
 };

@@ -4,7 +4,10 @@ import {
   connectWallet, 
   getWalletAddress,
   loadAccount,
-  getAccountBalances
+  getAccountBalances,
+  switchNetwork,
+  getCurrentNetwork,
+  type NetworkType
 } from '@/lib/stellar';
 import { FREIGHTER_ID, LOBSTR_ID, RABET_ID } from '@creit.tech/stellar-wallets-kit';
 
@@ -14,9 +17,11 @@ export interface WalletContextType {
   isLoading: boolean;
   error: string | null;
   balances: any[];
+  network: NetworkType;
   connect: (walletId: string) => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
+  switchNetwork: (network: NetworkType) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -34,13 +39,17 @@ export const useWalletState = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
+  const [network, setNetwork] = useState<NetworkType>('TESTNET');
 
   const isConnected = !!address;
 
   useEffect(() => {
     // Initialize wallet kit on mount
     try {
-      initWalletKit();
+      const savedNetwork = (localStorage.getItem('tansu_network') as NetworkType) || 'TESTNET';
+      setNetwork(savedNetwork);
+      initWalletKit(savedNetwork);
+      
       // Try to restore previous connection
       const savedAddress = localStorage.getItem('tansu_wallet_address');
       if (savedAddress) {
@@ -89,15 +98,41 @@ export const useWalletState = () => {
     }
   };
 
+  const handleSwitchNetwork = async (newNetwork: NetworkType) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await switchNetwork(newNetwork);
+      setNetwork(newNetwork);
+      localStorage.setItem('tansu_network', newNetwork);
+      
+      // Reconnect wallet if connected
+      if (address) {
+        setAddress(null);
+        setBalances([]);
+        // Clear saved address to force reconnection
+        localStorage.removeItem('tansu_wallet_address');
+      }
+    } catch (err: any) {
+      setError(`Failed to switch to ${newNetwork}: ${err.message}`);
+      console.error('Network switch error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     address,
     isConnected,
     isLoading,
     error,
     balances,
+    network,
     connect,
     disconnect,
-    refreshBalances: () => refreshBalances()
+    refreshBalances: () => refreshBalances(),
+    switchNetwork: handleSwitchNetwork,
   };
 };
 

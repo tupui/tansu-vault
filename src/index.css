@@ -2,158 +2,144 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tansu Vault - Web3 Design System
-All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
-*/
+/* ===== TANSU VAULT WEB3 DESIGN SYSTEM ===== */
 
+/* Tansu White Theme - Clean & Professional */
 @layer base {
   :root {
-    /* Core backgrounds - Deep space theme */
-    --background: 222 47% 2%;
-    --foreground: 210 40% 98%;
+    /* === BACKGROUNDS === */
+    --background: 0 0% 100%;        /* Pure white */
+    --foreground: 222 84% 4%;       /* Deep navy text */
+    --card: 0 0% 100%;              /* White cards */
+    --card-foreground: 222 84% 4%;  /* Dark text on cards */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 4%;
 
-    /* Surface colors */
-    --card: 222 47% 4%;
-    --card-foreground: 210 40% 98%;
-    --surface-elevated: 222 47% 6%;
+    /* === SURFACES === */
+    --surface-elevated: 210 40% 98%;  /* Very light gray */
+    --muted: 210 40% 95%;             /* Light gray muted */
+    --muted-foreground: 215 13% 45%;  /* Medium gray text */
 
-    --popover: 222 47% 4%;
-    --popover-foreground: 210 40% 98%;
+    /* === PRIMARY (Tansu Brand) === */
+    --primary: 221 83% 53%;           /* Tansu blue */
+    --primary-foreground: 0 0% 100%;  /* White text on primary */
+    --primary-glow: 221 100% 65%;     /* Lighter blue for accents */
 
-    /* Tansu-inspired primary purple */
-    --primary: 263 70% 55%;
-    --primary-foreground: 210 40% 98%;
-    --primary-glow: 263 70% 65%;
+    /* === SECONDARY === */
+    --secondary: 210 40% 95%;         /* Light gray */
+    --secondary-foreground: 222 84% 4%; /* Dark text */
 
-    /* Secondary purple variants */
-    --secondary: 222 47% 8%;
-    --secondary-foreground: 210 40% 98%;
+    /* === ACCENT === */
+    --accent: 142 76% 36%;            /* Fresh green accent */
+    --accent-foreground: 0 0% 100%;
 
-    /* Muted space gray */
-    --muted: 222 20% 15%;
-    --muted-foreground: 215 20% 65%;
+    /* === STATUS COLORS === */
+    --success: 142 76% 36%;           /* Green success */
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;         /* Red error */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;            /* Orange warning */
+    --warning-foreground: 0 0% 100%;
 
-    /* Accent tansu yellow */
-    --accent: 48 100% 67%;
-    --accent-foreground: 222 47% 2%;
+    /* === BORDERS & INPUTS === */
+    --border: 214 32% 91%;            /* Light border */
+    --input: 214 32% 91%;             /* Light input background */
+    --ring: 221 83% 53%;              /* Primary blue focus */
 
-    /* Status colors */
-    --success: 142 71% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 2%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    /* === SIDEBAR === */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 84% 4%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 95%;
+    --sidebar-accent-foreground: 222 84% 4%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 221 83% 53%;
 
-    /* Borders and inputs */
-    --border: 222 47% 12%;
-    --input: 222 47% 8%;
-    --ring: 217 91% 60%;
+    /* === VAULT SPECIFIC === */
+    --vault-yield: 142 76% 36%;       /* Success green for yields */
+    --carbon-green: 120 60% 45%;      /* Environmental green */
+    --deposit-blue: 221 83% 53%;      /* Primary blue for deposits */
+    --withdraw-orange: 25 95% 53%;    /* Orange for withdrawals */
 
-    /* Vault-specific colors */
-    --vault-yield: 142 71% 45%;
-    --carbon-green: 160 84% 39%;
-    --deposit-blue: 200 100% 60%;
-    --withdraw-orange: 25 95% 60%;
+    /* === GRADIENTS === */
+    --gradient-stellar: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 100% 65%));
+    --gradient-vault: linear-gradient(135deg, hsl(142 76% 36%), hsl(174 70% 41%));
+    --gradient-carbon: linear-gradient(135deg, hsl(120 60% 45%), hsl(142 76% 36%));
+    --gradient-surface: linear-gradient(135deg, hsl(210 40% 98%), hsl(214 32% 91%));
 
-    /* Gradients */
-    --gradient-stellar: linear-gradient(135deg, hsl(263 70% 55%), hsl(48 100% 67%));
-    --gradient-vault: linear-gradient(135deg, hsl(142 71% 45%), hsl(160 84% 39%));
-    --gradient-carbon: linear-gradient(135deg, hsl(160 84% 39%), hsl(142 71% 45%));
-    --gradient-surface: linear-gradient(135deg, hsl(222 47% 4%), hsl(222 47% 6%));
+    /* === SHADOWS === */
+    --shadow-stellar: 0 4px 16px -4px hsl(221 83% 53% / 0.15);
+    --shadow-vault: 0 4px 16px -4px hsl(142 76% 36% / 0.15);
+    --shadow-elevation: 0 2px 8px -2px hsl(222 84% 4% / 0.1);
+    --glow-primary: 0 0 20px hsl(221 100% 65% / 0.3);
 
-    /* Shadows and glows */
-    --shadow-stellar: 0 0 40px hsl(217 91% 60% / 0.3);
-    --shadow-vault: 0 0 30px hsl(142 71% 45% / 0.2);
-    --shadow-elevation: 0 4px 20px hsl(222 47% 1% / 0.5);
-    --glow-primary: 0 0 20px hsl(217 91% 60% / 0.4);
-
-    /* Animations */
+    /* === ANIMATIONS === */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* === LAYOUT === */
+    --radius: 0.5rem;
   }
 
-  .light {
-    /* Light mode - minimal changes for now, keeping dark as primary */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --surface-elevated: 210 40% 96%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Dark mode - for future use */
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 60 9% 98%;
+    --card: 224 71% 4%;
+    --card-foreground: 60 9% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 60 9% 98%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 27% 17%;
+    --secondary-foreground: 60 9% 98%;
+    --muted: 215 27% 17%;
+    --muted-foreground: 217 10% 64%;
+    --accent: 215 27% 17%;
+    --accent-foreground: 60 9% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 27% 17%;
+    --input: 215 27% 17%;
+    --ring: 262 83% 58%;
   }
 }
 
+/* Global element styling */
 @layer base {
   * {
     @apply border-border;
   }
 
   html {
-    @apply scroll-smooth;
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    @apply bg-background text-foreground;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
   }
 
-  /* Stellar particles animation */
-  .stellar-particles {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: -1;
-    background: radial-gradient(circle at 25% 25%, hsl(217 91% 60% / 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, hsl(263 70% 65% / 0.1) 0%, transparent 50%);
+  /* Clean minimal background */
+  .clean-bg {
+    background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--surface-elevated)));
   }
 
-  /* Glass morphism utility */
+  /* Glass effect - subtle for white theme */
   .glass {
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--border) / 0.2);
+    backdrop-filter: blur(8px) saturate(120%);
+    background-color: hsl(var(--background) / 0.95);
+    border: 1px solid hsl(var(--border) / 0.5);
   }
 
-  /* Glow effects */
-  .glow-stellar {
-    box-shadow: var(--glow-primary);
+  /* Subtle glow effects */
+  .glow-primary {
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.2);
   }
 
-  .glow-vault {
-    box-shadow: var(--shadow-vault);
+  .glow-success {
+    box-shadow: 0 0 12px hsl(var(--success) / 0.2);
   }
 
   /* Custom scrollbar */
@@ -162,15 +148,24 @@ All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    @apply bg-muted;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary));
-    border-radius: 3px;
+    @apply bg-primary/30 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary-glow));
+    @apply bg-primary/50;
+  }
+
+  /* Hover transitions */
+  .hover-lift {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevation);
   }
 }
