@@ -340,34 +340,10 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
 };
 
 // Pricing utilities using Reflector Network
-export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD'): Promise<number> => {
-  try {
-    // Use Reflector Network oracles - follows Stellar-Stratum pattern
-    const oracle = `${assetCode}${currency}`;
-    const response = await fetch(`https://api.reflector.network/v1/oracle/${oracle}/latest`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${assetCode} price in ${currency}`);
-    }
-    
-    const data = await response.json();
-    return data.value ? parseFloat(data.value) : 0;
-  } catch (error) {
-    console.error(`Error fetching ${assetCode} price:`, error);
-    
-    // Fallback prices for development
-    const fallbackPrices: Record<string, number> = {
-      XLMUSD: 0.12,
-      USDCUSD: 1.00,
-      XLMEUR: 0.11,
-      USDCEUR: 0.92,
-      XLMGBP: 0.095,
-      USDCGBP: 0.79,
-    };
-    
-    const key = `${assetCode}${currency}`.toUpperCase();
-    return fallbackPrices[key] || 0;
-  }
+export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD', network: 'mainnet' | 'testnet' = 'testnet'): Promise<number> => {
+  const { getOracleClient } = await import('@/lib/reflector-client');
+  const oracleClient = getOracleClient(network);
+  return await oracleClient.getAssetPrice(assetCode, currency);
 };
 
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {

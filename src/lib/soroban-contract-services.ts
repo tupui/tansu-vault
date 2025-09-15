@@ -122,26 +122,7 @@ export class TansuProjectContractService {
       return [];
     } catch (error) {
       console.error('Failed to search projects:', error);
-      
-      // Return mock results for development
-      if (query.toLowerCase().includes('test') || query.toLowerCase().includes('demo')) {
-        return [
-          {
-            id: 'test-project-1',
-            name: 'Test Project Alpha',
-            description: 'A demo project for testing',
-            maintainers: ['GDQJUTQYK2MQX2VGDR2FYWLIYAQIEGXTQVTFEMGH2BEWFG4BRUY4CKI7']
-          },
-          {
-            id: 'test-project-2', 
-            name: 'Demo Carbon Offset',
-            description: 'Carbon offset demonstration project',
-            maintainers: ['GCKFBEIYTKP5RDBKZ5T4XWUVQNKDGKB7WKZL2XHFGMQ5VCZFWQJGCPPM']
-          }
-        ];
-      }
-      
-      return [];
+      throw error;
     }
   }
 
@@ -193,9 +174,7 @@ export class TansuProjectContractService {
       return [];
     } catch (error) {
       console.error('Failed to get admins config:', error);
-      
-      // Return mock admin for development/testing
-      return ['GDQJUTQYK2MQX2VGDR2FYWLIYAQIEGXTQVTFEMGH2BEWFG4BRUY4CKI7'];
+      return [];
     }
   }
 

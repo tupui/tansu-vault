@@ -1,5 +1,5 @@
 // Tansu contract integration for project search and domain resolution
-import { useNetwork } from '@/contexts/NetworkContext';
+
 
 export interface TansuProject {
   id: string;
@@ -12,23 +12,7 @@ export interface TansuProject {
   status: 'active' | 'inactive';
 }
 
-// Tansu contract addresses (these would need to be the actual deployed addresses)
-const TANSU_CONTRACTS = {
-  TESTNET: {
-    PROJECTS: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add real Tansu projects contract
-    DOMAINS: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add real Soroban domains contract
-  },
-  MAINNET: {
-    PROJECTS: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add real Tansu projects contract  
-    DOMAINS: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add real Soroban domains contract
-  }
-} as const;
 
-// RPC server configuration
-const RPC_URLS = {
-  TESTNET: 'https://soroban-testnet.stellar.org',
-  MAINNET: 'https://soroban-mainnet.stellar.org',
-} as const;
 
 /**
  * Updated implementations using the new contract services
@@ -56,52 +40,7 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
     return mappedProjects;
   } catch (error) {
     console.error('Failed to search Tansu projects:', error);
-    
-    // Fallback to mock data
-    const mockProjects: TansuProject[] = [
-      {
-        id: '1',
-        name: 'stellar-sdk',
-        description: 'Official Stellar SDK for JavaScript',
-        domain: 'stellar-sdk.tansu.dev',
-        maintainers: ['GCXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
-        created_at: Date.now() - 86400000,
-        status: 'active' as const
-      },
-      {
-        id: '2', 
-        name: 'soroban-tools',
-        description: 'Tools for Soroban smart contract development',
-        domain: 'soroban-tools.tansu.dev',
-        maintainers: ['GDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
-        created_at: Date.now() - 172800000,
-        status: 'active' as const
-      },
-      {
-        id: '3',
-        name: 'stellar-vault',
-        description: 'Decentralized vault protocol for Stellar',
-        domain: 'stellar-vault.tansu.dev',
-        maintainers: ['GAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
-        created_at: Date.now() - 259200000,
-        status: 'active' as const
-      },
-      {
-        id: 'tansu',
-        name: 'tansu',
-        description: 'Tansu core project',
-        domain: 'tansu.tansu.dev',
-        maintainers: ['GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
-        created_at: Date.now() - 3600000,
-        status: 'active' as const
-      }
-    ].filter(project => 
-      project.name.toLowerCase().includes(query.toLowerCase()) ||
-      project.domain.toLowerCase().includes(query.toLowerCase()) ||
-      project.description.toLowerCase().includes(query.toLowerCase())
-    );
-
-    return mockProjects;
+    throw (error instanceof Error) ? error : new Error('Search failed');
   }
 }
 
@@ -126,9 +65,7 @@ export async function getTansuProject(identifier: string, network: 'mainnet' | '
     };
   } catch (error) {
     console.error('Failed to get Tansu project:', error);
-    // Fallback to search
-    const projects = await searchTansuProjects('', network);
-    return projects.find(p => p.id === identifier || p.domain === identifier) || null;
+    return null;
   }
 }
 
@@ -141,16 +78,7 @@ export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 
     return address;
   } catch (error) {
     console.error('Failed to resolve Soroban domain:', error);
-    
-    // Fallback to mock implementation
-    const mockDomainToAddress: Record<string, string> = {
-      'stellar-sdk.tansu.dev': 'GCXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      'soroban-tools.tansu.dev': 'GDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 
-      'stellar-vault.tansu.dev': 'GAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      'tansu.tansu.dev': 'GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    };
-
-    return mockDomainToAddress[domain] || null;
+    return null;
   }
 }
 
@@ -162,9 +90,7 @@ export async function isProjectMaintainer(projectId: string, walletAddress: stri
     return await projectService.isMaintainer(projectId, walletAddress);
   } catch (error) {
     console.error('Failed to check maintainer status:', error);
-    // Fallback to project data check
-    const project = await getTansuProject(projectId, network);
-    return project?.maintainers.includes(walletAddress) || false;
+    return false;
   }
 }
 

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getAvailableFiatCurrencies, type FiatCurrency } from '@/lib/fiat-currencies';
+import { useNetwork } from '@/contexts/NetworkContext';
 
 interface FiatCurrencyContextType {
   quoteCurrency: string;
@@ -30,6 +31,7 @@ export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) =>
   const [availableCurrencies, setAvailableCurrencies] = useState<FiatCurrency[]>([
     { code: 'USD', symbol: '$', name: 'US Dollar' }
   ]);
+  const { network } = useNetwork();
 
   const setQuoteCurrency = (currency: string) => {
     setQuoteCurrencyState(currency);
@@ -37,9 +39,9 @@ export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) =>
   };
 
   useEffect(() => {
-    const loadCurrencies = async () => {
+const loadCurrencies = async () => {
       try {
-        const currencies = await getAvailableFiatCurrencies();
+        const currencies = await getAvailableFiatCurrencies(network === 'mainnet' ? 'mainnet' : 'testnet');
         setAvailableCurrencies(currencies);
       } catch (error) {
         console.warn('Failed to load available currencies:', error);

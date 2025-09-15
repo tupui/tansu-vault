@@ -40,70 +40,46 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
   ZAR: { symbol: 'R', name: 'South African Rand' },
 };
 
-// Reflector FX Oracle endpoint
-const REFLECTOR_FX_URL = 'https://api.reflector.network/v1/fx';
 
 /**
- * Fetch available fiat currencies from Reflector FX Oracle
+ * Fetch available fiat currencies from on-chain oracle (Reflector)
  */
-export async function getAvailableFiatCurrencies(): Promise<FiatCurrency[]> {
+export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
+  const oracleClient = getOracleClient(network);
   try {
-    const response = await fetch(`${REFLECTOR_FX_URL}/currencies`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch currencies: ${response.status}`);
-    }
+    // Expect the oracle to expose supported currencies
+    // Method name follows Stellar-Stratum pattern: 'supported_currencies'
+    // We call it via a helper on the client; if not available, we return only USD
+    // to keep the app usable without introducing hardcoded pricing.
+    const anyClient = oracleClient as any;
+    const list: string[] = typeof anyClient.listSupportedCurrencies === 'function'
+      ? await anyClient.listSupportedCurrencies()
+      : ['USD'];
 
-    const data = await response.json();
-    const currencies: string[] = data.currencies || [];
-
-    // Map to FiatCurrency objects with symbols and names
-    return currencies.map(code => ({
-      code,
-      symbol: CURRENCY_INFO[code]?.symbol || code,
-      name: CURRENCY_INFO[code]?.name || code,
-    })).sort((a, b) => a.code.localeCompare(b.code));
-
+    return list
+      .map((code) => ({
+        code,
+        symbol: CURRENCY_INFO[code]?.symbol || code,
+        name: CURRENCY_INFO[code]?.name || code,
+      }))
+      .sort((a, b) => a.code.localeCompare(b.code));
   } catch (error) {
-    console.warn('Failed to fetch currencies from Reflector, using fallback list:', error);
-    
-    // Fallback to most common currencies
-    const fallbackCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF'];
-    return fallbackCurrencies.map(code => ({
-      code,
-      symbol: CURRENCY_INFO[code]?.symbol || code,
-      name: CURRENCY_INFO[code]?.name || code,
-    }));
+    console.error('Failed to load currencies from oracle:', error);
+    return [
+      { code: 'USD', symbol: CURRENCY_INFO['USD'].symbol, name: CURRENCY_INFO['USD'].name }
+    ];
   }
 }
 
 /**
- * Get exchange rate for XLM to fiat currency
+ * Get exchange rate for XLM to fiat currency (no hardcoded fallbacks)
  */
-export const getXlmFiatRate = async (fiatCurrency: string, network: string = 'testnet'): Promise<number> => {
-  try {
-    // Use Reflector Oracle for XLM prices
-    const oracleClient = getOracleClient(network === 'mainnet' ? 'mainnet' : 'testnet');
-    return await oracleClient.getAssetPrice('XLM', fiatCurrency);
-  } catch (error) {
-    console.warn(`Failed to get XLM/${fiatCurrency} rate:`, error);
-    
-    // Fallback rates for common currencies (approximate values)
-    const fallbackRates: Record<string, number> = {
-      'USD': 0.12,
-      'EUR': 0.10,
-      'GBP': 0.09,
-      'JPY': 13.2,
-      'CAD': 0.15,
-      'AUD': 0.16,
-      'CHF': 0.11,
-      'CNY': 0.78,
-      'KRW': 140,
-      'INR': 9.5
-    };
-    
-    return fallbackRates[fiatCurrency] || 0.12;
-  }
+export const getXlmFiatRate = async (
+  fiatCurrency: string,
+  network: string = 'testnet'
+): Promise<number> => {
+  const oracleClient = getOracleClient(network === 'mainnet' ? 'mainnet' : 'testnet');
+  return await oracleClient.getAssetPrice('XLM', fiatCurrency);
 };
 
 /**
