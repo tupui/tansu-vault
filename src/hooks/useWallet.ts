@@ -1,17 +1,19 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { 
-  initWalletKit, 
-  connectWallet, 
-  getWalletAddress,
-  loadAccount,
-  getAccountBalances,
-  switchNetwork,
-  getCurrentNetwork,
-} from '@/lib/stellar';
-import { FREIGHTER_ID, LOBSTR_ID, RABET_ID } from '@creit.tech/stellar-wallets-kit';
-import { useNetwork } from '@/contexts/NetworkContext';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { connectWallet, getAccountBalances } from '@/lib/stellar';
 
-export interface WalletContextType {
+// Wallet constants
+const FREIGHTER_ID = 'freighter';
+const LOBSTR_ID = 'lobstr';
+const RABET_ID = 'rabet';
+const ALBEDO_ID = 'albedo';
+const XBULL_ID = 'xbull';
+const HANA_ID = 'hana';
+const WALLETCONNECT_ID = 'walletconnect';
+const LEDGER_ID = 'ledger';
+const TREZOR_ID = 'trezor';
+
+// Wallet Context Interface
+interface WalletContextType {
   address: string | null;
   isConnected: boolean;
   isLoading: boolean;
@@ -22,9 +24,10 @@ export interface WalletContextType {
   refreshBalances: () => Promise<void>;
 }
 
+// Wallet Context and Hook
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export const useWallet = () => {
+export const useWallet = (): WalletContextType => {
   const context = useContext(WalletContext);
   if (!context) {
     throw new Error('useWallet must be used within a WalletProvider');
@@ -32,31 +35,23 @@ export const useWallet = () => {
   return context;
 };
 
-export const useWalletState = () => {
+// useWalletState Hook Implementation
+export const useWalletState = (): WalletContextType => {
   const [address, setAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
-  const { network } = useNetwork();
 
-  const isConnected = !!address;
+  const isConnected = Boolean(address);
 
+  // Initialize wallet kit and restore connection
   useEffect(() => {
-    // Initialize wallet kit with current network on mount
-    try {
-      const networkMapping = { 'mainnet': 'MAINNET', 'testnet': 'TESTNET' } as const;
-      initWalletKit(networkMapping[network]);
-      
-      // Try to restore previous connection
-      const savedAddress = localStorage.getItem('tansu_wallet_address');
-      if (savedAddress) {
-        setAddress(savedAddress);
-        refreshBalances(savedAddress);
-      }
-    } catch (err) {
-      console.error('Failed to initialize wallet kit:', err);
+    const savedAddress = localStorage.getItem('tansu_wallet_address');
+    if (savedAddress) {
+      setAddress(savedAddress);
+      refreshBalances(savedAddress);
     }
-  }, [network]);
+  }, []);
 
   const connect = async (walletId: string) => {
     setIsLoading(true);
@@ -89,9 +84,9 @@ export const useWalletState = () => {
     try {
       const accountBalances = await getAccountBalances(addressToUse);
       setBalances(accountBalances);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to refresh balances:', err);
-      setError('Failed to load account balances');
+      setBalances([]);
     }
   };
 
@@ -103,27 +98,57 @@ export const useWalletState = () => {
     balances,
     connect,
     disconnect,
-    refreshBalances: () => refreshBalances(),
+    refreshBalances,
   };
 };
 
 export { WalletContext };
 
-// Wallet types and constants
+// Wallet types and constants - Updated with all supported wallets
 export const WALLET_TYPES = {
   FREIGHTER: {
     id: FREIGHTER_ID,
     name: 'Freighter',
     description: 'Browser extension wallet for Stellar',
   },
-  LOBSTR: {
-    id: LOBSTR_ID,
-    name: 'Lobstr',
-    description: 'Mobile-first Stellar wallet',
+  ALBEDO: {
+    id: ALBEDO_ID,
+    name: 'Albedo',
+    description: 'Web-based wallet for Stellar',
   },
   RABET: {
     id: RABET_ID,
     name: 'Rabet',
-    description: 'Multi-chain wallet with Stellar support',
-  }
-};
+    description: 'Browser extension wallet',
+  },
+  LOBSTR: {
+    id: LOBSTR_ID,
+    name: 'LOBSTR',
+    description: 'Mobile wallet with web connector',
+  },
+  XBULL: {
+    id: XBULL_ID,
+    name: 'xBull Wallet',
+    description: 'Multi-platform wallet (Mobile, Web, Extension)',
+  },
+  HANA: {
+    id: HANA_ID,
+    name: 'Hana Wallet',
+    description: 'Mobile and browser extension wallet',
+  },
+  WALLETCONNECT: {
+    id: WALLETCONNECT_ID,
+    name: 'WalletConnect',
+    description: 'Connect mobile wallets via QR code',
+  },
+  LEDGER: {
+    id: LEDGER_ID,
+    name: 'Ledger',
+    description: 'Hardware wallet (via USB or Bluetooth)',
+  },
+  TREZOR: {
+    id: TREZOR_ID,
+    name: 'Trezor',
+    description: 'Hardware wallet',
+  },
+} as const;
