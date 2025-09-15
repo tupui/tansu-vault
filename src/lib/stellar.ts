@@ -6,6 +6,7 @@ import {
   LOBSTR_ID,
   RABET_ID
 } from '@creit.tech/stellar-wallets-kit';
+import * as StellarSdk from '@stellar/stellar-sdk';
 import {
   Horizon,
   Networks,
@@ -43,14 +44,15 @@ export const NETWORK_DETAILS = {
 // Current network state
 let currentNetwork: NetworkType = 'TESTNET';
 let horizonServer: Horizon.Server;
-let rpcServer: SorobanRpc.Server;
+let rpcServer: any; // Using any for now to avoid TypeScript issues
 let walletKit: StellarWalletsKit | null = null;
 
 // Initialize network-dependent services
 const initializeNetwork = (network: NetworkType) => {
   currentNetwork = network;
   horizonServer = new Horizon.Server(NETWORK_DETAILS[network].horizonUrl);
-  rpcServer = new SorobanRpc.Server(NETWORK_DETAILS[network].rpcUrl);
+  // Use any type for now to avoid TS issues with Soroban Server
+  (rpcServer as any) = new (StellarSdk as any).SorobanRpc.Server(NETWORK_DETAILS[network].rpcUrl);
 };
 
 // Initialize with testnet by default
@@ -189,28 +191,37 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
   try {
     const contracts = getContractAddresses();
 
+    // Convert amount to i128 with 7 decimals (XLM standard)
     const amountToI128 = (amt: string, decimals = 7): string => {
-      const neg = amt.trim().startsWith('-');
-      const s = neg ? amt.trim().slice(1) : amt.trim();
-      const [intPart, fracRaw = ''] = s.split('.');
-      const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
-      const scaled = (BigInt(intPart || '0') * (10n ** BigInt(decimals))) + BigInt(frac || '0');
-      return (neg ? -scaled : scaled).toString();
+      const num = parseFloat(amt);
+      const scaled = BigInt(Math.round(num * Math.pow(10, decimals)));
+      return scaled.toString();
     };
 
-    const i128 = amountToI128(amount);
+    const amountI128 = amountToI128(amount);
+    
+    // DeFindex vault expects vectors for amounts
+    const amountsDesired = [nativeToScVal(amountI128, { type: 'i128' })];
+    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for now
+    const fromAddress = nativeToScVal(userAddress, { type: 'address' });
+    const invest = nativeToScVal(true, { type: 'bool' }); // Auto-invest into strategies
 
     const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'deposit',
-      [nativeToScVal(i128, { type: 'i128' })]
+      [
+        nativeToScVal(amountsDesired, { type: 'vec' }),
+        nativeToScVal(amountsMin, { type: 'vec' }),
+        fromAddress,
+        invest
+      ]
     );
 
     // Soroban flow: simulate -> prepare -> sign -> send -> poll
     const sim = await rpcServer.simulateTransaction(transaction);
-    if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
-      throw new Error(`Simulation failed: ${sim.error || 'Unknown error'}`);
+    if (sim.error) {
+      throw new Error(`Simulation failed: ${sim.error}`);
     }
     const prepared = await rpcServer.prepareTransaction(transaction);
 
@@ -244,28 +255,35 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
   try {
     const contracts = getContractAddresses();
 
+    // Convert amount to i128 with 7 decimals (XLM standard)
     const amountToI128 = (amt: string, decimals = 7): string => {
-      const neg = amt.trim().startsWith('-');
-      const s = neg ? amt.trim().slice(1) : amt.trim();
-      const [intPart, fracRaw = ''] = s.split('.');
-      const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
-      const scaled = (BigInt(intPart || '0') * (10n ** BigInt(decimals))) + BigInt(frac || '0');
-      return (neg ? -scaled : scaled).toString();
+      const num = parseFloat(amt);
+      const scaled = BigInt(Math.round(num * Math.pow(10, decimals)));
+      return scaled.toString();
     };
 
-    const i128 = amountToI128(amount);
+    const amountI128 = amountToI128(amount);
+    
+    // DeFindex vault expects vectors for amounts
+    const amountsDesired = [nativeToScVal(amountI128, { type: 'i128' })];
+    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for now
+    const fromAddress = nativeToScVal(userAddress, { type: 'address' });
 
     const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'withdraw',
-      [nativeToScVal(i128, { type: 'i128' })]
+      [
+        nativeToScVal(amountsDesired, { type: 'vec' }),
+        nativeToScVal(amountsMin, { type: 'vec' }),
+        fromAddress
+      ]
     );
 
     // Soroban flow: simulate -> prepare -> sign -> send -> poll
     const sim = await rpcServer.simulateTransaction(transaction);
-    if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
-      throw new Error(`Simulation failed: ${sim.error || 'Unknown error'}`);
+    if (sim.error) {
+      throw new Error(`Simulation failed: ${sim.error}`);
     }
     const prepared = await rpcServer.prepareTransaction(transaction);
 
