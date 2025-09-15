@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -30,6 +31,14 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -57,6 +66,38 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Vault-specific colors
+        vault: {
+          yield: "hsl(var(--vault-yield))",
+        },
+        carbon: {
+          green: "hsl(var(--carbon-green))",
+        },
+        deposit: {
+          blue: "hsl(var(--deposit-blue))",
+        },
+        withdraw: {
+          orange: "hsl(var(--withdraw-orange))",
+        },
+        surface: {
+          elevated: "hsl(var(--surface-elevated))",
+        },
+      },
+      backgroundImage: {
+        'gradient-stellar': 'var(--gradient-stellar)',
+        'gradient-vault': 'var(--gradient-vault)',
+        'gradient-carbon': 'var(--gradient-carbon)',
+        'gradient-surface': 'var(--gradient-surface)',
+      },
+      boxShadow: {
+        'stellar': 'var(--shadow-stellar)',
+        'vault': 'var(--shadow-vault)',
+        'elevation': 'var(--shadow-elevation)',
+        'glow': 'var(--glow-primary)',
+      },
+      transitionTimingFunction: {
+        'smooth': 'var(--transition-smooth)',
+        'bounce': 'var(--transition-bounce)',
       },
       borderRadius: {
         lg: "var(--radius)",

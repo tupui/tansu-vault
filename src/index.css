@@ -2,41 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Tansu Vault - Web3 Design System
+All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core backgrounds - Deep space theme */
+    --background: 222 47% 2%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Surface colors */
+    --card: 222 47% 4%;
+    --card-foreground: 210 40% 98%;
+    --surface-elevated: 222 47% 6%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 222 47% 4%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Stellar-inspired primary colors */
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 2%;
+    --primary-glow: 217 91% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary cosmic blue */
+    --secondary: 222 47% 8%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted space gray */
+    --muted: 222 20% 15%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent stellar purple */
+    --accent: 263 70% 65%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* Status colors */
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and inputs */
+    --border: 222 47% 12%;
+    --input: 222 47% 8%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.5rem;
+    /* Vault-specific colors */
+    --vault-yield: 142 71% 45%;
+    --carbon-green: 160 84% 39%;
+    --deposit-blue: 200 100% 60%;
+    --withdraw-orange: 25 95% 60%;
+
+    /* Gradients */
+    --gradient-stellar: linear-gradient(135deg, hsl(217 91% 60%), hsl(263 70% 65%));
+    --gradient-vault: linear-gradient(135deg, hsl(142 71% 45%), hsl(160 84% 39%));
+    --gradient-carbon: linear-gradient(135deg, hsl(160 84% 39%), hsl(142 71% 45%));
+    --gradient-surface: linear-gradient(135deg, hsl(222 47% 4%), hsl(222 47% 6%));
+
+    /* Shadows and glows */
+    --shadow-stellar: 0 0 40px hsl(217 91% 60% / 0.3);
+    --shadow-vault: 0 0 30px hsl(142 71% 45% / 0.2);
+    --shadow-elevation: 0 4px 20px hsl(222 47% 1% / 0.5);
+    --glow-primary: 0 0 20px hsl(217 91% 60% / 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -55,34 +91,17 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  .light {
+    /* Light mode - minimal changes for now, keeping dark as primary */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --surface-elevated: 210 40% 96%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -99,7 +118,59 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Stellar particles animation */
+  .stellar-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    background: radial-gradient(circle at 25% 25%, hsl(217 91% 60% / 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, hsl(263 70% 65% / 0.1) 0%, transparent 50%);
+  }
+
+  /* Glass morphism utility */
+  .glass {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.2);
+  }
+
+  /* Glow effects */
+  .glow-stellar {
+    box-shadow: var(--glow-primary);
+  }
+
+  .glow-vault {
+    box-shadow: var(--shadow-vault);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary-glow));
   }
 }
