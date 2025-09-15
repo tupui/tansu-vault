@@ -1,80 +1,49 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Euro, PoundSterling } from 'lucide-react';
-
-export type Currency = 'USD' | 'EUR' | 'GBP';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 
 interface CurrencySelectorProps {
-  currentCurrency: Currency;
-  onCurrencyChange: (currency: Currency) => void;
+  disabled?: boolean;
   compact?: boolean;
 }
 
-export const CurrencySelector = ({ currentCurrency, onCurrencyChange, compact = false }: CurrencySelectorProps) => {
-  const currencies = [
-    {
-      value: 'USD' as Currency,
-      label: 'US Dollar',
-      symbol: '$',
-      icon: DollarSign,
-    },
-    {
-      value: 'EUR' as Currency,
-      label: 'Euro',
-      symbol: '€',
-      icon: Euro,
-    },
-    {
-      value: 'GBP' as Currency,
-      label: 'British Pound',
-      symbol: '£',
-      icon: PoundSterling,
-    },
-  ];
+export const CurrencySelector = ({ disabled = false, compact = false }: CurrencySelectorProps) => {
+  const { quoteCurrency, setQuoteCurrency, availableCurrencies, getCurrentCurrency } = useFiatCurrency();
 
-  const currentCurrencyData = currencies.find(c => c.value === currentCurrency);
-  const CurrentIcon = currentCurrencyData?.icon || DollarSign;
+  const currentCurrency = getCurrentCurrency();
 
   if (compact) {
     return (
-      <Badge variant="outline" className="flex items-center gap-1">
-        <CurrentIcon className="h-3 w-3" />
-        {currentCurrency}
+      <Badge variant="outline" className="text-xs font-mono">
+        {currentCurrency.symbol} {currentCurrency.code}
       </Badge>
     );
   }
 
   return (
-    <Select value={currentCurrency} onValueChange={onCurrencyChange}>
-      <SelectTrigger className="w-36">
-        <SelectValue>
-          <div className="flex items-center gap-2">
-            <CurrentIcon className="h-4 w-4" />
-            {currentCurrency}
-          </div>
-        </SelectValue>
+    <Select
+      value={quoteCurrency}
+      onValueChange={setQuoteCurrency}
+      disabled={disabled}
+    >
+      <SelectTrigger className="w-[120px] bg-background/50 border-border/50">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm">{currentCurrency.symbol}</span>
+          <span className="font-medium">{currentCurrency.code}</span>
+        </div>
       </SelectTrigger>
       <SelectContent>
-        {currencies.map((currency) => {
-          const Icon = currency.icon;
-          return (
-            <SelectItem key={currency.value} value={currency.value}>
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                <div>
-                  <div className="font-medium">{currency.value}</div>
-                  <div className="text-xs text-muted-foreground">{currency.label}</div>
-                </div>
+        {availableCurrencies.map((currency) => (
+          <SelectItem key={currency.code} value={currency.code}>
+            <div className="flex items-center gap-2">
+              <span className="font-mono w-6">{currency.symbol}</span>
+              <div>
+                <div className="font-medium">{currency.code}</div>
+                <div className="text-xs text-muted-foreground">{currency.name}</div>
               </div>
-            </SelectItem>
-          );
-        })}
+            </div>
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
