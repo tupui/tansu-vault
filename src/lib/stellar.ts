@@ -184,11 +184,22 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
   try {
     const contracts = getContractAddresses();
 
+    const amountToI128 = (amt: string, decimals = 7): string => {
+      const neg = amt.trim().startsWith('-');
+      const s = neg ? amt.trim().slice(1) : amt.trim();
+      const [intPart, fracRaw = ''] = s.split('.');
+      const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
+      const scaled = (BigInt(intPart || '0') * (10n ** BigInt(decimals))) + BigInt(frac || '0');
+      return (neg ? -scaled : scaled).toString();
+    };
+
+    const i128 = amountToI128(amount);
+
     const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'deposit',
-      [nativeToScVal(amount, { type: 'i128' })]
+      [nativeToScVal(i128, { type: 'i128' })]
     );
 
     const signedXdr = await signTransaction(transaction.toXDR());
@@ -205,11 +216,22 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
   try {
     const contracts = getContractAddresses();
 
+    const amountToI128 = (amt: string, decimals = 7): string => {
+      const neg = amt.trim().startsWith('-');
+      const s = neg ? amt.trim().slice(1) : amt.trim();
+      const [intPart, fracRaw = ''] = s.split('.');
+      const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
+      const scaled = (BigInt(intPart || '0') * (10n ** BigInt(decimals))) + BigInt(frac || '0');
+      return (neg ? -scaled : scaled).toString();
+    };
+
+    const i128 = amountToI128(amount);
+
     const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'withdraw',
-      [nativeToScVal(amount, { type: 'i128' })]
+      [nativeToScVal(i128, { type: 'i128' })]
     );
 
     const signedXdr = await signTransaction(transaction.toXDR());
