@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Shield, TrendingUp, Leaf, Users, Zap, Globe } from 'lucide-react';
-import tansuLogo from '@/assets/tansu-logo-hero.jpg';
+import tansuLogo from '@/assets/tansu-logo.svg';
 import { motion } from 'framer-motion';
 const Index = () => {
   const features = [{
