@@ -5,33 +5,33 @@ export const VaultStats = () => {
   const stats = [
     {
       title: 'Total Value Locked',
-      value: '$2,847,923',
-      change: '+12.5%',
-      changeType: 'positive',
+      value: '—',
+      change: '',
+      changeType: 'neutral',
       icon: DollarSign,
       gradient: 'bg-gradient-vault'
     },
     {
       title: 'Annual Yield',
-      value: '8.4%',
-      change: '+0.2%',
-      changeType: 'positive',
+      value: '—',
+      change: '',
+      changeType: 'neutral',
       icon: TrendingUp,
       gradient: 'bg-gradient-stellar'
     },
     {
       title: 'Active Projects',
-      value: '127',
-      change: '+15',
-      changeType: 'positive',
+      value: '—',
+      change: '',
+      changeType: 'neutral',
       icon: Users,
       gradient: 'bg-gradient-surface'
     },
     {
       title: 'Carbon Offset',
-      value: '45.2 tCO2',
-      change: '+8.1 tCO2',
-      changeType: 'positive',
+      value: '—',
+      change: '',
+      changeType: 'neutral',
       icon: Leaf,
       gradient: 'bg-gradient-carbon'
     }
@@ -51,11 +51,8 @@ export const VaultStats = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-            <p className={`text-xs flex items-center gap-1 mt-1 ${
-              stat.changeType === 'positive' ? 'text-success' : 'text-destructive'
-            }`}>
-              <TrendingUp className="h-3 w-3" />
-              {stat.change} from last month
+            <p className="text-xs text-muted-foreground mt-1">
+              Data will appear once funds are deposited and metrics are available
             </p>
           </CardContent>
         </Card>

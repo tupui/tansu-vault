@@ -54,12 +54,15 @@ const initializeNetwork = (network: NetworkType) => {
 // Initialize with testnet by default
 initializeNetwork('TESTNET');
 
+export const TESTNET_VAULT_ADDRESS = 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP';
+
 // Contract addresses based on network
 export const getContractAddresses = () => {
   if (currentNetwork === 'TESTNET') {
+    // Explicitly use the provided testnet vault address. No other logic.
     return {
       DEFINDEX_FACTORY: testnetContracts.ids.defindex_factory,
-      XLM_HODL_VAULT: testnetContracts.ids.xlm_hodl_vault,
+      XLM_HODL_VAULT: TESTNET_VAULT_ADDRESS,
       VAULT_HASH: testnetContracts.hashes.defindex_vault,
     };
   }

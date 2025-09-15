@@ -36,10 +36,10 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: '$2.8M+', label: 'Total Value Locked' },
-    { value: '127', label: 'Active Projects' },
-    { value: '8.4%', label: 'Average APY' },
-    { value: '45.2 tCO2', label: 'Carbon Offset' }
+    { value: '—', label: 'Total Value Locked' },
+    { value: '—', label: 'Active Projects' },
+    { value: '—', label: 'Average APY' },
+    { value: '—', label: 'Carbon Offset' }
   ];
 
   return (
