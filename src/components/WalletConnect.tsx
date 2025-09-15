@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Shield, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wallet, Shield, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useWallet, WALLET_TYPES } from '@/hooks/useWallet';
+import { useToast } from '@/hooks/use-toast';
 
-// Extend Window interface for Freighter wallet
+// Extend Window interface for Stellar wallet extensions
 declare global {
   interface Window {
     freighter?: any;
@@ -14,33 +17,70 @@ declare global {
 
 export const WalletConnect = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { address, isConnected, isLoading, error, connect, disconnect } = useWallet();
+  const { toast } = useToast();
 
   const walletOptions = [
     {
-      name: 'Freighter',
-      description: 'Browser extension wallet for Stellar',
+      ...WALLET_TYPES.FREIGHTER,
       icon: Wallet,
       available: typeof window !== 'undefined' && !!window.freighter,
     },
     {
-      name: 'Lobstr',
-      description: 'Mobile-first Stellar wallet',
+      ...WALLET_TYPES.LOBSTR,
       icon: Shield,
       available: true,
     },
     {
-      name: 'Rabet',
-      description: 'Multi-chain wallet with Stellar support',
+      ...WALLET_TYPES.RABET,
       icon: Sparkles,
       available: true,
     },
   ];
 
-  const handleConnect = async (walletName: string) => {
-    // TODO: Implement actual wallet connection logic
-    console.log(`Connecting to ${walletName}...`);
-    setIsOpen(false);
+  const handleConnect = async (walletId: string) => {
+    try {
+      await connect(walletId);
+      setIsOpen(false);
+      toast({
+        title: "Wallet Connected",
+        description: "Successfully connected to your Stellar wallet",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: error.message || "Failed to connect wallet",
+      });
+    }
   };
+
+  const handleDisconnect = () => {
+    disconnect();
+    toast({
+      title: "Wallet Disconnected",
+      description: "Your wallet has been disconnected",
+    });
+  };
+
+  if (isConnected) {
+    return (
+      <div className="flex items-center gap-3">
+        <Badge variant="outline" className="bg-gradient-stellar text-primary-foreground border-0">
+          <CheckCircle className="mr-1 h-3 w-3" />
+          {address?.slice(0, 4)}...{address?.slice(-4)}
+        </Badge>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleDisconnect}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Disconnect
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -68,7 +108,7 @@ export const WalletConnect = () => {
                 "cursor-pointer transition-all duration-300 hover:shadow-elevation border-border/50",
                 wallet.available ? "hover:bg-surface-elevated" : "opacity-50 cursor-not-allowed"
               )}
-              onClick={() => wallet.available && handleConnect(wallet.name)}
+              onClick={() => wallet.available && handleConnect(wallet.id)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">

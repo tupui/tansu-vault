@@ -20,12 +20,12 @@ All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
     --popover: 222 47% 4%;
     --popover-foreground: 210 40% 98%;
 
-    /* Stellar-inspired primary colors */
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 2%;
-    --primary-glow: 217 91% 70%;
+    /* Tansu-inspired primary purple */
+    --primary: 263 70% 55%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 263 70% 65%;
 
-    /* Secondary cosmic blue */
+    /* Secondary purple variants */
     --secondary: 222 47% 8%;
     --secondary-foreground: 210 40% 98%;
 
@@ -33,9 +33,9 @@ All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
     --muted: 222 20% 15%;
     --muted-foreground: 215 20% 65%;
 
-    /* Accent stellar purple */
-    --accent: 263 70% 65%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent tansu yellow */
+    --accent: 48 100% 67%;
+    --accent-foreground: 222 47% 2%;
 
     /* Status colors */
     --success: 142 71% 45%;
@@ -57,7 +57,7 @@ All colors MUST be HSL. Space/Stellar-themed with modern DeFi aesthetics.
     --withdraw-orange: 25 95% 60%;
 
     /* Gradients */
-    --gradient-stellar: linear-gradient(135deg, hsl(217 91% 60%), hsl(263 70% 65%));
+    --gradient-stellar: linear-gradient(135deg, hsl(263 70% 55%), hsl(48 100% 67%));
     --gradient-vault: linear-gradient(135deg, hsl(142 71% 45%), hsl(160 84% 39%));
     --gradient-carbon: linear-gradient(135deg, hsl(160 84% 39%), hsl(142 71% 45%));
     --gradient-surface: linear-gradient(135deg, hsl(222 47% 4%), hsl(222 47% 6%));

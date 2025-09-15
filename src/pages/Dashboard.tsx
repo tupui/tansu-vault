@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle } from 'lucide-react';
+import { VaultOperations } from '@/components/VaultOperations';
 
 export const Dashboard = () => {
   const recentTransactions = [
@@ -77,16 +78,6 @@ export const Dashboard = () => {
                         +$127.45 (+0.84%) this week
                       </p>
                     </div>
-                    <div className="space-x-3">
-                      <Button variant="outline" className="bg-deposit-blue/20 border-deposit-blue text-deposit-blue hover:bg-deposit-blue hover:text-primary-foreground">
-                        <ArrowDownLeft className="mr-2 h-4 w-4" />
-                        Deposit
-                      </Button>
-                      <Button variant="outline" className="bg-withdraw-orange/20 border-withdraw-orange text-withdraw-orange hover:bg-withdraw-orange hover:text-primary-foreground">
-                        <ArrowUpRight className="mr-2 h-4 w-4" />
-                        Withdraw
-                      </Button>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
@@ -146,6 +137,18 @@ export const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Vault Operations */}
+          <div className="mt-8">
+            <VaultOperations 
+              userBalance="1124.38"
+              vaultBalance="14123.45"
+              onOperationComplete={() => {
+                // Refresh data after operations
+                console.log('Operation completed, refreshing data...');
+              }}
+            />
           </div>
         </div>
       </div>
