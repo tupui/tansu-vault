@@ -42,7 +42,7 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
     const projects = await projectService.searchProjects(query);
     
     // Convert to our interface format
-    return projects.map((project: any) => ({
+    const mappedProjects = projects.map((project: any) => ({
       id: project.id || '',
       name: project.name || '',
       description: project.description || '',
@@ -52,6 +52,8 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
       created_at: project.created_at || Date.now(),
       status: (project.status || 'active') as 'active' | 'inactive',
     }));
+    
+    return mappedProjects;
   } catch (error) {
     console.error('Failed to search Tansu projects:', error);
     

@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { WalletConnect } from './WalletConnect';
+import { CurrencySelector } from './CurrencySelector';
+import { NetworkSelector } from './NetworkSelector';
 import { Vault, Leaf, Settings, BarChart3 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
@@ -80,14 +82,10 @@ export const Navigation = () => {
 
         {/* Wallet Connection - Stratum Style */}
         <div className="flex items-center gap-3">
-          {/* Network & Currency Display */}
+          {/* Network & Currency Selectors */}
           <div className="hidden sm:flex items-center gap-2">
-            <div className="text-xs bg-background/50 px-2 py-1 rounded border border-border/50">
-              <span className="text-muted-foreground">{network === 'testnet' ? 'Testnet' : 'Mainnet'}</span>
-            </div>
-            <div className="text-xs bg-background/50 px-2 py-1 rounded border border-border/50 font-mono">
-              {currentCurrency.symbol} {currentCurrency.code}
-            </div>
+            <NetworkSelector />
+            <CurrencySelector compact />
           </div>
 
           {isConnected && address ? (

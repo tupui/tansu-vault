@@ -80,19 +80,26 @@ export async function getAvailableFiatCurrencies(): Promise<FiatCurrency[]> {
  */
 export async function getXlmFiatRate(fiatCurrency: string): Promise<number> {
   try {
-    const response = await fetch(`${REFLECTOR_FX_URL}/xlm/${fiatCurrency.toLowerCase()}`);
+    // Use CoinGecko API as primary source (more reliable than Reflector FX)
+    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=${fiatCurrency.toLowerCase()}`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch XLM/${fiatCurrency} rate: ${response.status}`);
     }
 
     const data = await response.json();
-    return parseFloat(data.rate) || 0;
+    const rate = data?.stellar?.[fiatCurrency.toLowerCase()];
+    
+    if (rate && typeof rate === 'number') {
+      return rate;
+    }
+    
+    throw new Error('Invalid rate data received');
 
   } catch (error) {
     console.warn(`Failed to fetch XLM/${fiatCurrency} rate, using fallback:`, error);
     
-    // Fallback rates (approximate values for development)
+    // Fallback rates (updated approximate values)
     const fallbackRates: Record<string, number> = {
       USD: 0.12,
       EUR: 0.11,
@@ -101,9 +108,11 @@ export async function getXlmFiatRate(fiatCurrency: string): Promise<number> {
       CAD: 0.16,
       AUD: 0.18,
       CHF: 0.11,
+      BTC: 0.0000028,
+      ETH: 0.000033,
     };
     
-    return fallbackRates[fiatCurrency] || 0.12;
+    return fallbackRates[fiatCurrency.toUpperCase()] || 0.12;
   }
 }
 

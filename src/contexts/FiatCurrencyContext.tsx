@@ -23,10 +23,18 @@ interface FiatCurrencyProviderProps {
 }
 
 export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) => {
-  const [quoteCurrency, setQuoteCurrency] = useState('USD');
+  const [quoteCurrency, setQuoteCurrencyState] = useState(() => {
+    // Load from localStorage or default to USD
+    return localStorage.getItem('fiat-currency') || 'USD';
+  });
   const [availableCurrencies, setAvailableCurrencies] = useState<FiatCurrency[]>([
     { code: 'USD', symbol: '$', name: 'US Dollar' }
   ]);
+
+  const setQuoteCurrency = (currency: string) => {
+    setQuoteCurrencyState(currency);
+    localStorage.setItem('fiat-currency', currency);
+  };
 
   useEffect(() => {
     const loadCurrencies = async () => {

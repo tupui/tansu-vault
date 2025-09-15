@@ -1,6 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Globe, TestTube } from 'lucide-react';
 import { useNetwork } from '@/contexts/NetworkContext';
 
 interface NetworkSelectorProps {
@@ -10,54 +9,31 @@ interface NetworkSelectorProps {
 export const NetworkSelector = ({ disabled = false }: NetworkSelectorProps) => {
   const { network, setNetwork } = useNetwork();
 
-  const networks = [
-    {
-      value: 'testnet' as const,
-      label: 'Testnet',
-      icon: TestTube,
-      description: 'Development & testing network'
-    },
-    {
-      value: 'mainnet' as const,
-      label: 'Mainnet',
-      icon: Globe,
-      description: 'Live production network'
-    }
-  ];
-
-  const currentNetwork = networks.find(n => n.value === network) || networks[0];
-
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={network}
-        onValueChange={(value: 'mainnet' | 'testnet') => setNetwork(value)}
-        disabled={disabled}
-      >
-        <SelectTrigger className="w-[140px] bg-background/50 border-border/50">
+    <Select
+      value={network}
+      onValueChange={(value: 'testnet' | 'mainnet') => setNetwork(value)}
+      disabled={disabled}
+    >
+      <SelectTrigger className="w-[100px] bg-background/50 border-border/50">
+        <Badge variant="outline" className="text-xs">
+          {network === 'testnet' ? 'Testnet' : 'Mainnet'}
+        </Badge>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="testnet">
           <div className="flex items-center gap-2">
-            <currentNetwork.icon className="h-4 w-4" />
-            <span className="font-medium">{currentNetwork.label}</span>
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <span>Testnet</span>
           </div>
-        </SelectTrigger>
-        <SelectContent>
-          {networks.map((net) => (
-            <SelectItem key={net.value} value={net.value}>
-              <div className="flex items-center gap-2">
-                <net.icon className="h-4 w-4" />
-                <div>
-                  <div className="font-medium">{net.label}</div>
-                  <div className="text-xs text-muted-foreground">{net.description}</div>
-                </div>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Badge variant="outline" className="text-xs">
-        {network === 'testnet' ? 'Test' : 'Live'}
-      </Badge>
-    </div>
+        </SelectItem>
+        <SelectItem value="mainnet">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Mainnet</span>
+          </div>
+        </SelectItem>
+      </SelectContent>
+    </Select>
   );
 };

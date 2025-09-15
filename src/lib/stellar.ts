@@ -6,7 +6,6 @@ import {
   LOBSTR_ID,
   RABET_ID
 } from '@creit.tech/stellar-wallets-kit';
-import * as StellarSdk from '@stellar/stellar-sdk';
 import {
   Horizon,
   Networks,
@@ -15,6 +14,7 @@ import {
   Asset,
   Contract,
   nativeToScVal,
+  StrKey,
 } from '@stellar/stellar-sdk';
 import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
 import testnetContracts from '@/config/testnet.contracts.json';
