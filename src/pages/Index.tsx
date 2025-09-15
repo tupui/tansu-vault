@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Shield, TrendingUp, Leaf, Users, Zap, Globe } from 'lucide-react';
-import heroImage from '@/assets/stellar-vault-hero.jpg';
+import tansuLogo from '@/assets/tansu-logo-hero.jpg';
 import { motion } from 'framer-motion';
 const Index = () => {
   const features = [{
@@ -116,7 +116,7 @@ const Index = () => {
               delay: 0.2
             }} className="relative">
                 <div className="aspect-video rounded-2xl overflow-hidden shadow-stellar border border-border/20">
-                  <img src={heroImage} alt="Stellar Vault - DeFi for Project Treasuries" className="w-full h-full object-cover" />
+                  <img src={tansuLogo} alt="Tansu DAO - Decentralized Project Treasury Management" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-2xl" />
               </motion.div>
