@@ -152,6 +152,29 @@ export class TansuProjectContractService {
   }
 
   /**
+   * Get admins config from Tansu contract
+   */
+  async getAdminsConfig(): Promise<string[]> {
+    try {
+      const client = await Client.from({
+        contractId: this.contractId,
+        networkPassphrase: this.networkPassphrase,
+        rpcUrl: this.rpcServer.serverURL.toString(),
+        publicKey: 'GB6O2HRBOTD4BDIU3J5WUTR4XJXWW6VCROXE3ZYPKQM7EQV6OT2AZFE2', // Dummy key for simulation
+        signTransaction: async () => { throw new Error('Read-only operation'); },
+      });
+
+      const tx = await (client as any).get_admins_config();
+      const result = await tx.simulate();
+      
+      return result.result ? scValToNative(result.result) : [];
+    } catch (error) {
+      console.error('Failed to get admins config:', error);
+      return [];
+    }
+  }
+
+  /**
    * Check if address is maintainer
    */
   async isMaintainer(projectId: string, address: string): Promise<boolean> {

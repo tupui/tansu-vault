@@ -8,10 +8,7 @@ import { StratumWalletModal } from './StratumWalletModal';
 import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-import { isProjectMaintainer } from '@/lib/tansu-contracts';
-
-// Main Tansu project ID - this should be the official Tansu project
-const TANSU_PROJECT_ID = 'tansu-core';
+import { createProjectService } from '@/lib/soroban-contract-services';
 
 export const Navigation = () => {
   const location = useLocation();
@@ -24,7 +21,7 @@ export const Navigation = () => {
   const isActive = (path: string) => location.pathname === path;
   const currentCurrency = getCurrentCurrency();
 
-  // Check if connected wallet is a Tansu admin
+  // Check if connected wallet is a Tansu admin using get_admins_config
   useEffect(() => {
     const checkTansuAdmin = async () => {
       if (!isConnected || !address) {
@@ -33,7 +30,11 @@ export const Navigation = () => {
       }
 
       try {
-        const isAdmin = await isProjectMaintainer(TANSU_PROJECT_ID, address, network);
+        const projectService = createProjectService(network);
+        const adminConfig = await projectService.getAdminsConfig();
+        
+        // Check if current address is in the admin list
+        const isAdmin = adminConfig && adminConfig.includes(address);
         setIsTansuAdmin(isAdmin);
       } catch (error) {
         console.error('Failed to check Tansu admin status:', error);
