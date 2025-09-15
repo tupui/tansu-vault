@@ -3,11 +3,15 @@ import { WalletConnect } from './WalletConnect';
 import { CurrencySelector } from './CurrencySelector';
 import { Vault, Leaf, Settings, BarChart3 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StratumWalletModal } from './StratumWalletModal';
 import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { isProjectMaintainer } from '@/lib/tansu-contracts';
+
+// Main Tansu project ID - this should be the official Tansu project
+const TANSU_PROJECT_ID = 'tansu-core';
 
 export const Navigation = () => {
   const location = useLocation();
@@ -15,9 +19,30 @@ export const Navigation = () => {
   const { network } = useNetwork();
   const { getCurrentCurrency } = useFiatCurrency();
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [isTansuAdmin, setIsTansuAdmin] = useState(false);
   
   const isActive = (path: string) => location.pathname === path;
   const currentCurrency = getCurrentCurrency();
+
+  // Check if connected wallet is a Tansu admin
+  useEffect(() => {
+    const checkTansuAdmin = async () => {
+      if (!isConnected || !address) {
+        setIsTansuAdmin(false);
+        return;
+      }
+
+      try {
+        const isAdmin = await isProjectMaintainer(TANSU_PROJECT_ID, address, network);
+        setIsTansuAdmin(isAdmin);
+      } catch (error) {
+        console.error('Failed to check Tansu admin status:', error);
+        setIsTansuAdmin(false);
+      }
+    };
+
+    checkTansuAdmin();
+  }, [isConnected, address, network]);
   
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border glass backdrop-blur-xl">
@@ -67,16 +92,18 @@ export const Navigation = () => {
             </Link>
           </Button>
           
-          <Button 
-            asChild
-            variant={isActive('/admin') ? 'default' : 'ghost'} 
-            size="sm"
-          >
-            <Link to="/admin">
-              <Settings className="mr-2 h-4 w-4" />
-              Admin
-            </Link>
-          </Button>
+          {isTansuAdmin && (
+            <Button 
+              asChild
+              variant={isActive('/admin') ? 'default' : 'ghost'} 
+              size="sm"
+            >
+              <Link to="/admin">
+                <Settings className="mr-2 h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Wallet Connection - Stratum Style */}
