@@ -83,6 +83,15 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
         maintainers: ['GAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
         created_at: Date.now() - 259200000,
         status: 'active' as const
+      },
+      {
+        id: 'tansu',
+        name: 'tansu',
+        description: 'Tansu core project',
+        domain: 'tansu.tansu.dev',
+        maintainers: ['GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'],
+        created_at: Date.now() - 3600000,
+        status: 'active' as const
       }
     ].filter(project => 
       project.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -136,6 +145,7 @@ export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 
       'stellar-sdk.tansu.dev': 'GCXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
       'soroban-tools.tansu.dev': 'GDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 
       'stellar-vault.tansu.dev': 'GAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'tansu.tansu.dev': 'GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
     };
 
     return mockDomainToAddress[domain] || null;

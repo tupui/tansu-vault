@@ -43,12 +43,14 @@ export const NETWORK_DETAILS = {
 // Current network state
 let currentNetwork: NetworkType = 'TESTNET';
 let horizonServer: Horizon.Server;
+let rpcServer: SorobanRpc.Server;
 let walletKit: StellarWalletsKit | null = null;
 
 // Initialize network-dependent services
 const initializeNetwork = (network: NetworkType) => {
   currentNetwork = network;
   horizonServer = new Horizon.Server(NETWORK_DETAILS[network].horizonUrl);
+  rpcServer = new SorobanRpc.Server(NETWORK_DETAILS[network].rpcUrl);
 };
 
 // Initialize with testnet by default
@@ -205,10 +207,33 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
       [nativeToScVal(i128, { type: 'i128' })]
     );
 
-    const signedXdr = await signTransaction(transaction.toXDR());
+    // Soroban flow: simulate -> prepare -> sign -> send -> poll
+    const sim = await rpcServer.simulateTransaction(transaction);
+    if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
+      throw new Error(`Simulation failed: ${sim.error || 'Unknown error'}`);
+    }
+    const prepared = await rpcServer.prepareTransaction(transaction);
+
+    const signedXdr = await signTransaction(prepared.toXDR());
     const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-    const result = await getHorizonServer().submitTransaction(signedTx);
-    return result.hash;
+
+    const send = await rpcServer.sendTransaction(signedTx);
+    if (send.errorResult) {
+      throw new Error('Transaction submission failed');
+    }
+
+    const hash = send.hash;
+    for (let i = 0; i < 10; i++) {
+      const res = await rpcServer.getTransaction(hash);
+      if (res.status === 'SUCCESS') {
+        return hash;
+      }
+      if (res.status === 'FAILED') {
+        throw new Error('Transaction failed on chain');
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    throw new Error('Transaction timed out');
   } catch (error) {
     console.error('Deposit failed:', error);
     throw new Error(`Deposit failed: ${error}`);
@@ -237,10 +262,33 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
       [nativeToScVal(i128, { type: 'i128' })]
     );
 
-    const signedXdr = await signTransaction(transaction.toXDR());
+    // Soroban flow: simulate -> prepare -> sign -> send -> poll
+    const sim = await rpcServer.simulateTransaction(transaction);
+    if (!SorobanRpc.Api.isSimulationSuccess(sim)) {
+      throw new Error(`Simulation failed: ${sim.error || 'Unknown error'}`);
+    }
+    const prepared = await rpcServer.prepareTransaction(transaction);
+
+    const signedXdr = await signTransaction(prepared.toXDR());
     const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-    const result = await getHorizonServer().submitTransaction(signedTx);
-    return result.hash;
+
+    const send = await rpcServer.sendTransaction(signedTx);
+    if (send.errorResult) {
+      throw new Error('Transaction submission failed');
+    }
+
+    const hash = send.hash;
+    for (let i = 0; i < 10; i++) {
+      const res = await rpcServer.getTransaction(hash);
+      if (res.status === 'SUCCESS') {
+        return hash;
+      }
+      if (res.status === 'FAILED') {
+        throw new Error('Transaction failed on chain');
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    throw new Error('Transaction timed out');
   } catch (error) {
     console.error('Withdrawal failed:', error);
     throw new Error(`Withdrawal failed: ${error}`);

@@ -3,12 +3,16 @@ import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { VaultOperations } from '@/components/VaultOperations';
 import { useVaultData } from '@/hooks/useVaultData';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { formatFiatAmount } from '@/lib/fiat-currencies';
 
 export const Vault = () => {
   const { walletXlm, vaultXlm, xlmFiatRate, totalFiatValue } = useVaultData();
+  const { getCurrentCurrency } = useFiatCurrency();
+  const currentCurrency = getCurrentCurrency();
   const totalXlm = (walletXlm ?? 0) + (vaultXlm ?? 0);
-  const fmtUSD = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
   const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+  const fmtFiat = (n: number | null | undefined) => (n == null ? '—' : formatFiatAmount(n, currentCurrency));
 
   return (
     <Layout>
@@ -32,8 +36,8 @@ export const Vault = () => {
                   <p className="text-lg font-semibold">{fmt(vaultXlm)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total (USD)</p>
-                  <p className="text-lg font-semibold">{totalFiatValue == null ? '—' : fmtUSD(totalFiatValue)}</p>
+                  <p className="text-sm text-muted-foreground">Total ({currentCurrency.code})</p>
+                  <p className="text-lg font-semibold">{fmtFiat(totalFiatValue)}</p>
                 </div>
               </div>
             </CardContent>
