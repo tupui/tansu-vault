@@ -1,5 +1,6 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
+import { VaultStats } from '@/components/VaultStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,19 +28,6 @@ const Index = () => {
     title: 'DAO Integration',
     description: 'Seamlessly integrate with your existing Tansu DAO governance structure',
     gradient: 'bg-gradient-surface'
-  }];
-  const stats = [{
-    value: '—',
-    label: 'Total Value Locked'
-  }, {
-    value: '—',
-    label: 'Active Projects'
-  }, {
-    value: '—',
-    label: 'Average APY'
-  }, {
-    value: '—',
-    label: 'Carbon Offset'
   }];
   return <Layout>
       <Navigation />
@@ -88,21 +76,14 @@ const Index = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8">
-                  {stats.map((stat, index) => <motion.div key={index} initial={{
-                  opacity: 0,
-                  y: 20
-                }} animate={{
-                  opacity: 1,
-                  y: 0
-                }} transition={{
-                  duration: 0.6,
-                  delay: 0.2 + index * 0.1
-                }} className="text-center">
-                      <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                      <div className="text-sm text-muted-foreground">{stat.label}</div>
-                    </motion.div>)}
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="pt-8"
+                >
+                  <VaultStats />
+                </motion.div>
               </motion.div>
 
               <motion.div initial={{
