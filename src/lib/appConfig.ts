@@ -13,16 +13,16 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     horizonUrl: 'https://horizon.stellar.org',
     sorobanRpcUrl: 'https://soroban-rpc.mainnet.stellar.gateway.fm',
     networkPassphrase: 'Public Global Stellar Network ; September 2015',
-    sorobanDomainContract: 'CAP76HMLCGDDFWMKCL25W477MO7BMUQNLQTLJFZ7FZ6IUJGOGZLHX65M',
-    tansuProjectContract: 'CBUXJRIWW5XILUR54YXJGLKMPFR4PO4KYZM5PXZJWWQTBQNAKFYZFQCV',
+    sorobanDomainContract: 'CATRNPHYKNXAPNLHEYH55REB6YSAJLGCPA4YM6L3WUKSZOPI77M2UMKI',
+    tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
   },
   testnet: {
     name: 'testnet',
     horizonUrl: 'https://horizon-testnet.stellar.org',
     sorobanRpcUrl: 'https://soroban-testnet.stellar.org:443',
     networkPassphrase: 'Test SDF Network ; September 2015',
-    sorobanDomainContract: 'CAZSQRWM4HW2NFCMJFQPKRQVJ44OVKIFEQPMYHCWJFBFQCEJXRTPUPBK',
-    tansuProjectContract: 'CBUXJRIWW5XILUR54YXJGLKMPFR4PO4KYZM5PXZJWWQTBQNAKFYZFQCV',
+    sorobanDomainContract: 'CAQWEZNN5X7LFD6PZBQXALVH4LSJW2KGNDMFJBQ3DWHXUVQ2JIZ6AQU6',
+    tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
   }
 };
 
