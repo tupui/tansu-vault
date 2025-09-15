@@ -1,4 +1,4 @@
-import { getOracleClient } from '@/lib/reflector-client';
+import { getAssetPrice } from '@/lib/reflector';
 
 // Supported fiat currencies fetched dynamically from Reflector FX Oracle
 export interface FiatCurrency {
@@ -45,16 +45,11 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
  * Fetch available fiat currencies from on-chain oracle (Reflector)
  */
 export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
-  const oracleClient = getOracleClient(network);
   try {
-    // Expect the oracle to expose supported currencies
-    // Method name follows Stellar-Stratum pattern: 'supported_currencies'
-    // We call it via a helper on the client; if not available, we return only USD
-    // to keep the app usable without introducing hardcoded pricing.
-    const anyClient = oracleClient as any;
-    const list: string[] = typeof anyClient.listSupportedCurrencies === 'function'
-      ? await anyClient.listSupportedCurrencies()
-      : ['USD'];
+    // Get supported currencies from FOREX oracle
+    const { getOracleClient } = await import('@/lib/reflector-client');
+    const oracleClient = getOracleClient(network);
+    const list: string[] = await oracleClient.listSupportedCurrencies();
 
     return list
       .map((code) => ({
@@ -65,9 +60,8 @@ export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' 
       .sort((a, b) => a.code.localeCompare(b.code));
   } catch (error) {
     console.error('Failed to load currencies from oracle:', error);
-    return [
-      { code: 'USD', symbol: CURRENCY_INFO['USD'].symbol, name: CURRENCY_INFO['USD'].name }
-    ];
+    // Return minimal fallback without hardcoded pricing
+    throw new Error('Failed to load available fiat currencies from oracle');
   }
 }
 
@@ -78,8 +72,7 @@ export const getXlmFiatRate = async (
   fiatCurrency: string,
   network: string = 'testnet'
 ): Promise<number> => {
-  const oracleClient = getOracleClient(network === 'mainnet' ? 'mainnet' : 'testnet');
-  return await oracleClient.getAssetPrice('XLM', fiatCurrency);
+  return await getAssetPrice('XLM', fiatCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
 };
 
 /**

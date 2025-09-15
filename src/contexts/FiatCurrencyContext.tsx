@@ -28,9 +28,7 @@ export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) =>
     // Load from localStorage or default to USD
     return localStorage.getItem('fiat-currency') || 'USD';
   });
-  const [availableCurrencies, setAvailableCurrencies] = useState<FiatCurrency[]>([
-    { code: 'USD', symbol: '$', name: 'US Dollar' }
-  ]);
+  const [availableCurrencies, setAvailableCurrencies] = useState<FiatCurrency[]>([]);
   const { network } = useNetwork();
 
   const setQuoteCurrency = (currency: string) => {
@@ -39,19 +37,24 @@ export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) =>
   };
 
   useEffect(() => {
-const loadCurrencies = async () => {
+    const loadCurrencies = async () => {
       try {
         const currencies = await getAvailableFiatCurrencies(network === 'mainnet' ? 'mainnet' : 'testnet');
         setAvailableCurrencies(currencies);
       } catch (error) {
-        console.warn('Failed to load available currencies:', error);
+        console.error('Failed to load fiat currencies:', error);
+        // Set minimal fallback
+        setAvailableCurrencies([{ code: 'USD', symbol: '$', name: 'US Dollar' }]);
       }
     };
+
     loadCurrencies();
-  }, []);
+  }, [network]);
 
   const getCurrentCurrency = (): FiatCurrency => {
-    return availableCurrencies.find(c => c.code === quoteCurrency) || availableCurrencies[0];
+    return availableCurrencies.find(c => c.code === quoteCurrency) || 
+           availableCurrencies[0] || 
+           { code: 'USD', symbol: '$', name: 'US Dollar' };
   };
 
   return (

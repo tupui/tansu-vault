@@ -341,9 +341,8 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
 
 // Pricing utilities using Reflector Network
 export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD', network: 'mainnet' | 'testnet' = 'testnet'): Promise<number> => {
-  const { getOracleClient } = await import('@/lib/reflector-client');
-  const oracleClient = getOracleClient(network);
-  return await oracleClient.getAssetPrice(assetCode, currency);
+  const { getAssetPrice } = await import('@/lib/reflector');
+  return await getAssetPrice(assetCode, currency, network);
 };
 
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
