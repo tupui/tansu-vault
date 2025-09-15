@@ -14,7 +14,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     sorobanRpcUrl: 'https://soroban-rpc.mainnet.stellar.gateway.fm',
     networkPassphrase: 'Public Global Stellar Network ; September 2015',
     sorobanDomainContract: 'CAP76HMLCGDDFWMKCL25W477MO7BMUQNLQTLJFZ7FZ6IUJGOGZLHX65M',
-    tansuProjectContract: 'CBMQEKWBGJ2IKW5M7DLBNHZL22DQFVHPYZJGWNHFQHKW4V7PB2PZFQCV',
+    tansuProjectContract: 'CBUXJRIWW5XILUR54YXJGLKMPFR4PO4KYZM5PXZJWWQTBQNAKFYZFQCV',
   },
   testnet: {
     name: 'testnet',
@@ -22,7 +22,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     sorobanRpcUrl: 'https://soroban-testnet.stellar.org:443',
     networkPassphrase: 'Test SDF Network ; September 2015',
     sorobanDomainContract: 'CAZSQRWM4HW2NFCMJFQPKRQVJ44OVKIFEQPMYHCWJFBFQCEJXRTPUPBK',
-    tansuProjectContract: 'CBMQEKWBGJ2IKW5M7DLBNHZL22DQFVHPYZJGWNHFQHKW4V7PB2PZFQCV',
+    tansuProjectContract: 'CBUXJRIWW5XILUR54YXJGLKMPFR4PO4KYZM5PXZJWWQTBQNAKFYZFQCV',
   }
 };
 
