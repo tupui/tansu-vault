@@ -1,3 +1,5 @@
+import { getOracleClient } from '@/lib/reflector-client';
+
 // Supported fiat currencies fetched dynamically from Reflector FX Oracle
 export interface FiatCurrency {
   code: string;
@@ -78,43 +80,31 @@ export async function getAvailableFiatCurrencies(): Promise<FiatCurrency[]> {
 /**
  * Get exchange rate for XLM to fiat currency
  */
-export async function getXlmFiatRate(fiatCurrency: string): Promise<number> {
+export const getXlmFiatRate = async (fiatCurrency: string, network: string = 'testnet'): Promise<number> => {
   try {
-    // Use CoinGecko API as primary source (more reliable than Reflector FX)
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=${fiatCurrency.toLowerCase()}`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch XLM/${fiatCurrency} rate: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const rate = data?.stellar?.[fiatCurrency.toLowerCase()];
-    
-    if (rate && typeof rate === 'number') {
-      return rate;
-    }
-    
-    throw new Error('Invalid rate data received');
-
+    // Use Reflector Oracle for XLM prices
+    const oracleClient = getOracleClient(network === 'mainnet' ? 'mainnet' : 'testnet');
+    return await oracleClient.getAssetPrice('XLM', fiatCurrency);
   } catch (error) {
-    console.warn(`Failed to fetch XLM/${fiatCurrency} rate, using fallback:`, error);
+    console.warn(`Failed to get XLM/${fiatCurrency} rate:`, error);
     
-    // Fallback rates (updated approximate values)
+    // Fallback rates for common currencies (approximate values)
     const fallbackRates: Record<string, number> = {
-      USD: 0.12,
-      EUR: 0.11,
-      GBP: 0.095,
-      JPY: 18,
-      CAD: 0.16,
-      AUD: 0.18,
-      CHF: 0.11,
-      BTC: 0.0000028,
-      ETH: 0.000033,
+      'USD': 0.12,
+      'EUR': 0.10,
+      'GBP': 0.09,
+      'JPY': 13.2,
+      'CAD': 0.15,
+      'AUD': 0.16,
+      'CHF': 0.11,
+      'CNY': 0.78,
+      'KRW': 140,
+      'INR': 9.5
     };
     
-    return fallbackRates[fiatCurrency.toUpperCase()] || 0.12;
+    return fallbackRates[fiatCurrency] || 0.12;
   }
-}
+};
 
 /**
  * Format amount in fiat currency
