@@ -6,44 +6,42 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Shield, TrendingUp, Leaf, Users, Zap, Globe } from 'lucide-react';
 import heroImage from '@/assets/stellar-vault-hero.jpg';
 import { motion } from 'framer-motion';
-
 const Index = () => {
-  const features = [
-    {
-      icon: TrendingUp,
-      title: 'Yield Generation',
-      description: 'Earn competitive yields on your project treasury while maintaining full liquidity',
-      gradient: 'bg-gradient-vault'
-    },
-    {
-      icon: Shield,
-      title: 'Secure & Transparent',
-      description: 'Built on Stellar blockchain with audited smart contracts and full on-chain transparency',
-      gradient: 'bg-gradient-stellar'
-    },
-    {
-      icon: Leaf,
-      title: 'Carbon Neutral',
-      description: 'Automatic carbon offset for all vault operations through StellarCarbon integration',
-      gradient: 'bg-gradient-carbon'
-    },
-    {
-      icon: Users,
-      title: 'DAO Integration',
-      description: 'Seamlessly integrate with your existing Tansu DAO governance structure',
-      gradient: 'bg-gradient-surface'
-    }
-  ];
-
-  const stats = [
-    { value: '—', label: 'Total Value Locked' },
-    { value: '—', label: 'Active Projects' },
-    { value: '—', label: 'Average APY' },
-    { value: '—', label: 'Carbon Offset' }
-  ];
-
-  return (
-    <Layout>
+  const features = [{
+    icon: TrendingUp,
+    title: 'Yield Generation',
+    description: 'Earn competitive yields on your project treasury while maintaining full liquidity',
+    gradient: 'bg-gradient-vault'
+  }, {
+    icon: Shield,
+    title: 'Secure & Transparent',
+    description: 'Built on Stellar blockchain with audited smart contracts and full on-chain transparency',
+    gradient: 'bg-gradient-stellar'
+  }, {
+    icon: Leaf,
+    title: 'Carbon Neutral',
+    description: 'Automatic carbon offset for all vault operations through StellarCarbon integration',
+    gradient: 'bg-gradient-carbon'
+  }, {
+    icon: Users,
+    title: 'DAO Integration',
+    description: 'Seamlessly integrate with your existing Tansu DAO governance structure',
+    gradient: 'bg-gradient-surface'
+  }];
+  const stats = [{
+    value: '—',
+    label: 'Total Value Locked'
+  }, {
+    value: '—',
+    label: 'Active Projects'
+  }, {
+    value: '—',
+    label: 'Average APY'
+  }, {
+    value: '—',
+    label: 'Carbon Offset'
+  }];
+  return <Layout>
       <Navigation />
       
       <div className="pt-24">
@@ -51,12 +49,15 @@ const Index = () => {
         <section className="relative overflow-hidden">
           <div className="container mx-auto px-6 py-20">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="space-y-8"
-              >
+              <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.6
+            }} className="space-y-8">
                 <div className="space-y-4">
                   <Badge className="bg-gradient-stellar text-primary-foreground border-0">
                     <Zap className="mr-1 h-3 w-3" />
@@ -83,41 +84,39 @@ const Index = () => {
                     Get Started
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button size="lg" variant="outline" className="border-border hover:bg-surface-elevated">
-                    <Globe className="mr-2 h-5 w-5" />
-                    View on Stellar
-                  </Button>
+                  
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8">
-                  {stats.map((stat, index) => (
-                    <motion.div 
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.2 + index * 0.1 }}
-                      className="text-center"
-                    >
+                  {stats.map((stat, index) => <motion.div key={index} initial={{
+                  opacity: 0,
+                  y: 20
+                }} animate={{
+                  opacity: 1,
+                  y: 0
+                }} transition={{
+                  duration: 0.6,
+                  delay: 0.2 + index * 0.1
+                }} className="text-center">
                       <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                       <div className="text-sm text-muted-foreground">{stat.label}</div>
-                    </motion.div>
-                  ))}
+                    </motion.div>)}
                 </div>
               </motion.div>
 
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="relative"
-              >
+              <motion.div initial={{
+              opacity: 0,
+              scale: 0.95
+            }} animate={{
+              opacity: 1,
+              scale: 1
+            }} transition={{
+              duration: 0.8,
+              delay: 0.2
+            }} className="relative">
                 <div className="aspect-video rounded-2xl overflow-hidden shadow-stellar border border-border/20">
-                  <img 
-                    src={heroImage} 
-                    alt="Stellar Vault - DeFi for Project Treasuries"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={heroImage} alt="Stellar Vault - DeFi for Project Treasuries" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-2xl" />
               </motion.div>
@@ -128,13 +127,17 @@ const Index = () => {
         {/* Features Section */}
         <section className="py-20">
           <div className="container mx-auto px-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} whileInView={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} viewport={{
+            once: true
+          }} className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold mb-4">
                 Why Choose Tansu Vault?
               </h2>
@@ -145,14 +148,18 @@ const Index = () => {
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
+              {features.map((feature, index) => <motion.div key={index} initial={{
+              opacity: 0,
+              y: 20
+            }} whileInView={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.6,
+              delay: index * 0.1
+            }} viewport={{
+              once: true
+            }}>
                   <Card className="glass border-border/50 hover:shadow-elevation transition-all duration-300 h-full">
                     <CardHeader>
                       <div className={`p-3 rounded-xl ${feature.gradient} w-fit`}>
@@ -166,8 +173,7 @@ const Index = () => {
                       </CardDescription>
                     </CardContent>
                   </Card>
-                </motion.div>
-              ))}
+                </motion.div>)}
             </div>
           </div>
         </section>
@@ -175,12 +181,17 @@ const Index = () => {
         {/* CTA Section */}
         <section className="py-20">
           <div className="container mx-auto px-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} whileInView={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} viewport={{
+            once: true
+          }}>
               <Card className="glass border-border/50 shadow-stellar">
                 <CardContent className="p-12 text-center">
                   <h3 className="text-3xl font-bold mb-4">
@@ -205,8 +216,6 @@ const Index = () => {
           </div>
         </section>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Index;
