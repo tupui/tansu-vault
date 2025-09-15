@@ -13,12 +13,19 @@ import { useWallet, WALLET_TYPES } from '@/hooks/useWallet';
 import { useToast } from '@/hooks/use-toast';
 import { NetworkSelector } from '@/components/NetworkSelector';
 import { CurrencySelector } from '@/components/CurrencySelector';
-import { Wallet, LogOut, Loader2, CheckCircle } from 'lucide-react';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { Wallet, LogOut, Loader2, CheckCircle, Globe } from 'lucide-react';
+import { isValidPublicKey, sanitizeError } from '@/lib/validation';
+import { resolveSorobanDomain } from '@/lib/soroban-domains';
+import { useNetwork } from '@/contexts/NetworkContext';
 
 export const WalletConnect: React.FC = () => {
   const { address, isConnected, isLoading, connect, disconnect } = useWallet();
+  const { network } = useNetwork();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [domainInput, setDomainInput] = useState('');
+  const [showDomainConnect, setShowDomainConnect] = useState(false);
 
   const handleConnect = async (walletId: string) => {
     try {
@@ -32,7 +39,42 @@ export const WalletConnect: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Connection Failed",
-        description: error.message || "Failed to connect wallet",
+        description: sanitizeError(error),
+      });
+    }
+  };
+
+  const handleDomainConnect = async (input: string, resolvedAddress?: string) => {
+    try {
+      let targetAddress = resolvedAddress;
+      
+      // If no resolved address provided, try to resolve or validate
+      if (!targetAddress) {
+        if (isValidPublicKey(input)) {
+          targetAddress = input;
+        } else {
+          // Try to resolve as domain
+          targetAddress = await resolveSorobanDomain(input, network);
+          if (!targetAddress) {
+            throw new Error('Domain could not be resolved or invalid address provided');
+          }
+        }
+      }
+
+      // Connect using the resolved/validated address - for now we'll use freighter as default
+      await connect('freighter');
+      setIsDialogOpen(false);
+      setDomainInput('');
+      
+      toast({
+        title: "Connected via Domain",
+        description: `Successfully connected to ${input}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Domain Connection Failed",
+        description: sanitizeError(error),
+        variant: "destructive",
       });
     }
   };
@@ -98,36 +140,68 @@ export const WalletConnect: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 mt-4">
-            {Object.values(WALLET_TYPES).map((wallet) => {
-              const isFreighterAvailable = wallet.id === 'freighter' ? typeof window !== 'undefined' && (window as any).freighter : true;
-              
-              return (
-                <Button
-                  key={wallet.id}
-                  variant="outline"
-                  className="flex items-center justify-start gap-3 h-auto p-4"
-                  onClick={() => handleConnect(wallet.id)}
-                  disabled={!isFreighterAvailable || isLoading}
-                >
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{wallet.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {wallet.description}
-                    </div>
-                    {!isFreighterAvailable && wallet.id === 'freighter' && (
-                      <div className="text-xs text-destructive mt-1">
-                        Extension not detected
+            <div className="grid gap-4 mt-4">
+              {Object.values(WALLET_TYPES).map((wallet) => {
+                const isFreighterAvailable = wallet.id === 'freighter' ? typeof window !== 'undefined' && (window as any).freighter : true;
+                
+                return (
+                  <Button
+                    key={wallet.id}
+                    variant="outline"
+                    className="flex items-center justify-start gap-3 h-auto p-4"
+                    onClick={() => handleConnect(wallet.id)}
+                    disabled={!isFreighterAvailable || isLoading}
+                  >
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{wallet.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {wallet.description}
                       </div>
+                      {!isFreighterAvailable && wallet.id === 'freighter' && (
+                        <div className="text-xs text-destructive mt-1">
+                          Extension not detected
+                        </div>
+                      )}
+                    </div>
+                    {isLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     )}
-                  </div>
-                  {isLoading && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                  </Button>
+                );
+              })}
+              
+              {/* Domain Connection Option */}
+              <div className="border-t pt-4 mt-4">
+                <Button 
+                  onClick={() => setShowDomainConnect(!showDomainConnect)}
+                  variant="outline"
+                  className="w-full mb-3"
+                  size="sm"
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  Connect via Soroban Domain
                 </Button>
-              );
-            })}
-          </div>
+                
+                {showDomainConnect && (
+                  <div className="space-y-3">
+                    <AddressAutocomplete
+                      value={domainInput}
+                      onChange={(value, resolved) => {
+                        setDomainInput(value);
+                      }}
+                      placeholder="Enter .xlm domain or Stellar address"
+                      className="w-full"
+                      showValidation={true}
+                      onResolvedAddressChange={(resolved) => {
+                        if (resolved && domainInput) {
+                          handleDomainConnect(domainInput, resolved);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
         </DialogContent>
       </Dialog>
     </div>

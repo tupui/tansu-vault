@@ -8,6 +8,8 @@ import { ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/hooks/use-toast';
 import { depositToVault, withdrawFromVault, formatAssetAmount } from '@/lib/stellar';
+import { isValidAmount, formatStellarAmount, sanitizeError } from '@/lib/validation';
+import { useFiatConversion } from '@/hooks/useFiatConversion';
 
 interface VaultOperationsProps {
   userBalance?: string;
@@ -28,17 +30,29 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
   
   const { address, isConnected } = useWallet();
   const { toast } = useToast();
+  const { formatFiatAmount } = useFiatConversion();
 
   const handleDeposit = async () => {
     if (!address || !depositAmount) return;
     
+    if (!isValidAmount(depositAmount)) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount (positive number with max 7 decimal places)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const formattedAmount = formatStellarAmount(depositAmount);
+    
     setIsLoading(true);
     try {
-      await depositToVault(address, depositAmount);
+      await depositToVault(address, formattedAmount);
       
       toast({
         title: "Deposit Successful",
-        description: `Successfully deposited ${formatAssetAmount(depositAmount)} XLM to vault`,
+        description: `Successfully deposited ${formatAssetAmount(formattedAmount)} XLM to vault`,
       });
       
       setDepositAmount('');
@@ -48,7 +62,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
       toast({
         variant: "destructive",
         title: "Deposit Failed",
-        description: error.message || "Failed to deposit to vault",
+        description: sanitizeError(error),
       });
     } finally {
       setIsLoading(false);
@@ -58,13 +72,34 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
   const handleWithdraw = async () => {
     if (!address || !withdrawAmount) return;
     
+    if (!isValidAmount(withdrawAmount)) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount (positive number with max 7 decimal places)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const formattedAmount = formatStellarAmount(withdrawAmount);
+    const availableBalance = parseFloat(vaultBalance);
+    
+    if (parseFloat(formattedAmount) > availableBalance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `Cannot withdraw ${formattedAmount} XLM. Available: ${availableBalance.toFixed(7)} XLM`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      await withdrawFromVault(address, withdrawAmount);
+      await withdrawFromVault(address, formattedAmount);
       
       toast({
         title: "Withdrawal Successful",
-        description: `Successfully withdrew ${formatAssetAmount(withdrawAmount)} XLM from vault`,
+        description: `Successfully withdrew ${formatAssetAmount(formattedAmount)} XLM from vault`,
       });
       
       setWithdrawAmount('');
@@ -74,7 +109,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
       toast({
         variant: "destructive",
         title: "Withdrawal Failed",
-        description: error.message || "Failed to withdraw from vault",
+        description: sanitizeError(error),
       });
     } finally {
       setIsLoading(false);

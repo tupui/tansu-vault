@@ -2,17 +2,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TrendingUp, Leaf, Users, DollarSign } from 'lucide-react';
 import { useVaultTVL } from '@/hooks/useVaultTVL';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { formatFiatAmount } from '@/lib/fiat-currencies';
 
 export const VaultStats = () => {
   const { totalFiatValue, loading, error } = useVaultTVL();
   const { getCurrentCurrency } = useFiatCurrency();
+  const { formatFiatAmount: formatWithHook } = useFiatConversion();
   
   const currentCurrency = getCurrentCurrency();
   
   const formatValue = (value: number | null) => {
     if (value == null) return '—';
-    return formatFiatAmount(value, currentCurrency);
+    try {
+      return formatWithHook(value);
+    } catch {
+      return formatFiatAmount(value, currentCurrency);
+    }
   };
 
   const stats = [
