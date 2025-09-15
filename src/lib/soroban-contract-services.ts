@@ -1,5 +1,5 @@
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { Contract, Address, scValToNative, nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { Contract, Address, scValToNative, nativeToScVal, xdr, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { getNetworkConfig } from './appConfig';
 
 /**
@@ -41,14 +41,24 @@ export class SorobanDomainContractService {
       const domainParam = nativeToScVal(domain, { type: 'string' });
       
       const operation = contract.call('resolve', domainParam);
-      const tx = await this.rpcServer.simulateTransaction(operation as any);
-      
-      if ('error' in tx) {
-        console.warn('Domain resolution failed:', tx.error);
+      // Build a transaction and simulate using base64 XDR as required by RPC
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+
+      if ('error' in sim) {
+        console.warn('Domain resolution failed:', sim.error);
         return null;
       }
 
-      const result = tx.result?.retval;
+      const result = sim.result?.retval;
       return result ? scValToNative(result) : null;
     } catch (error) {
       console.error('Failed to resolve domain:', error);
@@ -105,15 +115,24 @@ export class TansuProjectContractService {
       
       // Build transaction for simulation
       const operation = contract.call('search_projects', searchParam);
-      const tx = await this.rpcServer.simulateTransaction(operation as any);
-      
-      if ('error' in tx) {
-        console.warn('Contract simulation error:', tx.error);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+
+      if ('error' in sim) {
+        console.warn('Contract simulation error:', sim.error);
         return [];
       }
 
       // Parse results if successful
-      const result = tx.result?.retval;
+      const result = sim.result?.retval;
       if (result) {
         const projects = scValToNative(result);
         return Array.isArray(projects) ? projects : [];
@@ -135,14 +154,23 @@ export class TansuProjectContractService {
       const identifierParam = nativeToScVal(identifier, { type: 'string' });
       
       const operation = contract.call('get_project', identifierParam);
-      const tx = await this.rpcServer.simulateTransaction(operation as any);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
       
-      if ('error' in tx) {
-        console.warn('Failed to get project:', tx.error);
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+      
+      if ('error' in sim) {
+        console.warn('Failed to get project:', sim.error);
         return null;
       }
 
-      const result = tx.result?.retval;
+      const result = sim.result?.retval;
       return result ? scValToNative(result) : null;
     } catch (error) {
       console.error('Failed to get project:', error);
@@ -158,14 +186,23 @@ export class TansuProjectContractService {
       const contract = new Contract(this.contractId);
       
       const operation = contract.call('get_admins_config');
-      const tx = await this.rpcServer.simulateTransaction(operation as any);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
       
-      if ('error' in tx) {
-        console.warn('Failed to get admins config:', tx.error);
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+      
+      if ('error' in sim) {
+        console.warn('Failed to get admins config:', sim.error);
         return [];
       }
 
-      const result = tx.result?.retval;
+      const result = sim.result?.retval;
       if (result) {
         const admins = scValToNative(result);
         return Array.isArray(admins) ? admins : [];
@@ -188,14 +225,23 @@ export class TansuProjectContractService {
       const addressParam = nativeToScVal(Address.fromString(address));
       
       const operation = contract.call('is_maintainer', projectParam, addressParam);
-      const tx = await this.rpcServer.simulateTransaction(operation as any);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
       
-      if ('error' in tx) {
-        console.warn('Failed to check maintainer status:', tx.error);
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+      
+      if ('error' in sim) {
+        console.warn('Failed to check maintainer status:', sim.error);
         return false;
       }
 
-      const result = tx.result?.retval;
+      const result = sim.result?.retval;
       return result ? Boolean(scValToNative(result)) : false;
     } catch (error) {
       console.error('Failed to check maintainer status:', error);
