@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { WalletConnect } from './WalletConnect';
 import { CurrencySelector } from './CurrencySelector';
-import { NetworkSelector } from './NetworkSelector';
 import { Vault, Leaf, Settings, BarChart3 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
@@ -82,9 +81,8 @@ export const Navigation = () => {
 
         {/* Wallet Connection - Stratum Style */}
         <div className="flex items-center gap-3">
-          {/* Network & Currency Selectors */}
+          {/* Currency Selector Only (Network selection moved to wallet modal) */}
           <div className="hidden sm:flex items-center gap-2">
-            <NetworkSelector />
             <CurrencySelector compact />
           </div>
 

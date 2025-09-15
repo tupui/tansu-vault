@@ -181,16 +181,24 @@ export class TansuProjectContractService {
 // Helper function to create services
 export function createDomainService(network: 'mainnet' | 'testnet' = 'testnet'): SorobanDomainContractService {
   const contractId = network === 'mainnet' 
-    ? 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' // TODO: Real mainnet domain contract
-    : 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // TODO: Real testnet domain contract
+    ? '' // No mainnet yet
+    : 'CAQWEZNN5X7LFD6PZBQXALVH4LSJW2KGNDMFJBQ3DWHXUVQ2JIZ6AQU6'; // Soroban domains testnet
+  
+  if (!contractId) {
+    throw new Error(`Domain contract not available on ${network}`);
+  }
   
   return new SorobanDomainContractService(contractId, network);
 }
 
 export function createProjectService(network: 'mainnet' | 'testnet' = 'testnet'): TansuProjectContractService {
   const contractId = network === 'mainnet'
-    ? 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' // TODO: Real mainnet project contract  
-    : 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // TODO: Real testnet project contract
+    ? '' // No mainnet yet
+    : 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN'; // Tansu testnet contract
+    
+  if (!contractId) {
+    throw new Error(`Project contract not available on ${network}`);
+  }
     
   return new TansuProjectContractService(contractId, network);
 }

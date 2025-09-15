@@ -12,7 +12,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Wallet, Shield, ArrowRight, RefreshCw, AlertCircle, Usb, Info, KeyRound, Plus, Globe, ChevronDown } from 'lucide-react';
 import { useWallet, WALLET_TYPES } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
-import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface StratumWalletModalProps {
@@ -23,7 +22,6 @@ interface StratumWalletModalProps {
 export const StratumWalletModal = ({ open, onOpenChange }: StratumWalletModalProps) => {
   const { toast } = useToast();
   const { network, setNetwork } = useNetwork();
-  const { quoteCurrency, setQuoteCurrency, availableCurrencies } = useFiatCurrency();
   const { connect, isLoading } = useWallet();
   
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -83,57 +81,36 @@ export const StratumWalletModal = ({ open, onOpenChange }: StratumWalletModalPro
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Network and Currency Selection */}
+          {/* Network Selection Only */}
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                Network Configuration
+                Network Selection
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Network</Label>
-                  <Select value={network} onValueChange={setNetwork}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="testnet">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">Test</Badge>
-                          Stellar Testnet
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="mainnet">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="text-xs">Live</Badge>
-                          Stellar Mainnet
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium">Quote Currency</Label>
-                  <Select value={quoteCurrency} onValueChange={setQuoteCurrency}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCurrencies.map((currency) => (
-                        <SelectItem key={currency.code} value={currency.code}>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono w-6">{currency.symbol}</span>
-                            {currency.code} - {currency.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <CardContent>
+              <div>
+                <Label className="text-sm font-medium">Stellar Network</Label>
+                <Select value={network} onValueChange={setNetwork}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="testnet">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">Test</Badge>
+                        Stellar Testnet
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="mainnet">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default" className="text-xs">Live</Badge>
+                        Stellar Mainnet
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
