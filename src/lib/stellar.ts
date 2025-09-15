@@ -16,6 +16,7 @@ import {
   Contract,
   nativeToScVal,
 } from '@stellar/stellar-sdk';
+import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
 import testnetContracts from '@/config/testnet.contracts.json';
 
 // Network configuration
@@ -44,15 +45,14 @@ export const NETWORK_DETAILS = {
 // Current network state
 let currentNetwork: NetworkType = 'TESTNET';
 let horizonServer: Horizon.Server;
-let rpcServer: any; // Using any for now to avoid TypeScript issues
+let rpcServer: SorobanServer;
 let walletKit: StellarWalletsKit | null = null;
 
 // Initialize network-dependent services
 const initializeNetwork = (network: NetworkType) => {
   currentNetwork = network;
   horizonServer = new Horizon.Server(NETWORK_DETAILS[network].horizonUrl);
-  // Use any type for now to avoid TS issues with Soroban Server
-  (rpcServer as any) = new (StellarSdk as any).SorobanRpc.Server(NETWORK_DETAILS[network].rpcUrl);
+  rpcServer = new SorobanServer(NETWORK_DETAILS[network].rpcUrl);
 };
 
 // Initialize with testnet by default
@@ -220,7 +220,7 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
 
     // Soroban flow: simulate -> prepare -> sign -> send -> poll
     const sim = await rpcServer.simulateTransaction(transaction);
-    if (sim.error) {
+    if (Api.isSimulationError(sim)) {
       throw new Error(`Simulation failed: ${sim.error}`);
     }
     const prepared = await rpcServer.prepareTransaction(transaction);
@@ -282,7 +282,7 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
 
     // Soroban flow: simulate -> prepare -> sign -> send -> poll
     const sim = await rpcServer.simulateTransaction(transaction);
-    if (sim.error) {
+    if (Api.isSimulationError(sim)) {
       throw new Error(`Simulation failed: ${sim.error}`);
     }
     const prepared = await rpcServer.prepareTransaction(transaction);
