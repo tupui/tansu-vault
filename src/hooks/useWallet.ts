@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { connectWallet, getAccountBalances } from '@/lib/stellar';
+import { connectWallet, getAccountBalances, initWalletKit, switchNetwork } from '@/lib/stellar';
+import type { NetworkType } from '@/lib/stellar';
+import { useNetwork } from '@/contexts/NetworkContext';
 
 // Wallet constants
 const FREIGHTER_ID = 'freighter';
@@ -42,6 +44,8 @@ export const useWalletState = (): WalletContextType => {
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
 
+  const { network } = useNetwork();
+
   const isConnected = Boolean(address);
 
   // Initialize wallet kit and restore connection
@@ -53,12 +57,26 @@ export const useWalletState = (): WalletContextType => {
     }
   }, []);
 
+  useEffect(() => {
+    const target: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+    try {
+      switchNetwork(target);
+    } catch {
+      initWalletKit(target);
+    }
+    if (address) {
+      refreshBalances(address);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [network]);
+
   const connect = async (walletId: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const connectedAddress = await connectWallet(walletId);
+      const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+      const connectedAddress = await connectWallet(walletId, targetNetwork);
       setAddress(connectedAddress);
       localStorage.setItem('tansu_wallet_address', connectedAddress);
       await refreshBalances(connectedAddress);

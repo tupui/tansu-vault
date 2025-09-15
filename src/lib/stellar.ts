@@ -109,8 +109,8 @@ export const getWalletKit = () => {
 };
 
 // Wallet connection utilities
-export const connectWallet = async (walletId: string) => {
-  const kit = getWalletKit();
+export const connectWallet = async (walletId: string, network: NetworkType = currentNetwork) => {
+  const kit = initWalletKit(network);
   await kit.setWallet(walletId);
   const { address } = await kit.getAddress();
   return address;
