@@ -57,9 +57,7 @@ const Index = () => {
                       Powered by DeFindex & Stellar
                     </Badge>
                     <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight">
-                      <span className="bg-gradient-stellar bg-clip-text text-transparent">
-                        Stellar Vault
-                      </span>
+                      <span className="bg-gradient-stellar bg-clip-text text-transparent">Tansu Vault</span>
                       <br />
                       for Tansu Projects
                     </h1>
