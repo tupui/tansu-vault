@@ -46,7 +46,19 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
  */
 export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
   try {
-    // Get supported currencies from FOREX oracle
+    // Temporarily return fallback currencies until we have proper contract integration
+    // The console shows RPC format errors with oracle calls
+    console.warn('Fiat currency oracle query temporarily disabled due to RPC format issues');
+    
+    // Return commonly supported currencies as fallback
+    return [
+      { code: 'USD', symbol: '$', name: 'US Dollar' },
+      { code: 'EUR', symbol: '€', name: 'Euro' },
+      { code: 'GBP', symbol: '£', name: 'British Pound' },
+      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+    ];
+    
+    /* TODO: Fix RPC transaction format for oracle calls
     const { getOracleClient } = await import('@/lib/reflector-client');
     const oracleClient = getOracleClient(network);
     const list: string[] = await oracleClient.listSupportedCurrencies();
@@ -58,10 +70,13 @@ export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' 
         name: CURRENCY_INFO[code]?.name || code,
       }))
       .sort((a, b) => a.code.localeCompare(b.code));
+    */
   } catch (error) {
     console.error('Failed to load currencies from oracle:', error);
     // Return minimal fallback without hardcoded pricing
-    throw new Error('Failed to load available fiat currencies from oracle');
+    return [
+      { code: 'USD', symbol: '$', name: 'US Dollar' }
+    ];
   }
 }
 

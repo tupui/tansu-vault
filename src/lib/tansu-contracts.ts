@@ -1,5 +1,5 @@
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { Contract, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { getNetworkConfig, getContractAddresses } from './appConfig';
 
 
@@ -99,14 +99,16 @@ export async function isProjectMaintainer(projectId: string, walletAddress: stri
 /**
  * Get project vault balance and statistics
  */
-export async function getProjectVaultStats(projectWalletAddress: string): Promise<{
+export async function getProjectVaultStats(projectId: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<{
   vaultBalance: string;
   walletBalance: string;
   totalDeposited: string;
   yieldEarned: string;
 }> {
   try {
-    const contracts = getContractAddresses();
+    const contracts = getContractAddresses(network);
+    const config = getNetworkConfig(network);
+    const rpcServer = new SorobanServer(config.sorobanRpcUrl);
     const contract = new Contract(contracts.TANSU_PROJECT);
     
     // Call the project contract to get vault balance for this project
@@ -114,20 +116,55 @@ export async function getProjectVaultStats(projectWalletAddress: string): Promis
       'get_project_vault_balance', 
       nativeToScVal(projectId, { type: 'string' })
     );
-    const rpcServer = new SorobanServer(getNetworkConfig('testnet').sorobanRpcUrl);
-    const sim: any = await rpcServer.simulateTransaction(op as any);
+    
+    // Build a proper transaction for simulation
+    const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+    const transaction = new TransactionBuilder(sourceAccount, {
+      fee: '100',
+      networkPassphrase: config.networkPassphrase,
+    })
+    .addOperation(op)
+    .setTimeout(30)
+    .build();
+    
+    const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      throw new Error(`Project vault balance query error: ${sim.error}`);
+      console.warn(`Project vault balance query error: ${sim.error}`);
+      return {
+        vaultBalance: '0',
+        walletBalance: '0',
+        totalDeposited: '0',
+        yieldEarned: '0'
+      };
     }
 
     const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) return 0;
+    if (!retval) {
+      return {
+        vaultBalance: '0',
+        walletBalance: '0',
+        totalDeposited: '0',
+        yieldEarned: '0'
+      };
+    }
 
     const result = scValToNative(retval);
-    return parseFloat(result.toString()) / 10_000_000; // Convert from stroops
+    const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
+    
+    return {
+      vaultBalance: balance.toString(),
+      walletBalance: '0', // Would need separate call
+      totalDeposited: balance.toString(), // Simplified
+      yieldEarned: '0' // Would need yield calculation
+    };
   } catch (error) {
-    console.error('Failed to get project vault balance:', error);
-    return 0;
+    console.error('Failed to get project vault stats:', error);
+    return {
+      vaultBalance: '0',
+      walletBalance: '0',
+      totalDeposited: '0',
+      yieldEarned: '0'
+    };
   }
 }

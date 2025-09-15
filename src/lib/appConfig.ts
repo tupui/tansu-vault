@@ -34,6 +34,14 @@ export const getNetworkConfig = (network: string): NetworkConfig => {
   return config;
 };
 
+export const getContractAddresses = (network: string = 'testnet') => {
+  const config = getNetworkConfig(network);
+  return {
+    TANSU_PROJECT: config.tansuProjectContract || '',
+    SOROBAN_DOMAIN: config.sorobanDomainContract || '',
+  };
+};
+
 export const SUPPORTED_NETWORKS = Object.keys(NETWORK_CONFIG);
 
 // Reflector Oracle Contract Addresses (three official oracles per network)
