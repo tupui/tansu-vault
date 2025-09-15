@@ -9,7 +9,7 @@ interface CachedRate {
 
 export class ReflectorOracleClient {
   private server: SorobanServer;
-  private contractAddress: string;
+  private contracts: { external_cex: string; pubnet: string; forex: string };
   private cache = new Map<string, CachedRate>();
   private readonly CACHE_DURATION = 60_000; // 1 minute
   private readonly RATE_LIMIT_DURATION = 2_000; // 2 seconds
@@ -21,7 +21,7 @@ export class ReflectorOracleClient {
       : 'https://soroban-testnet.stellar.org:443';
 
     this.server = new SorobanServer(rpcUrl);
-    this.contractAddress = REFLECTOR_ORACLE_CONTRACTS[network];
+    this.contracts = REFLECTOR_ORACLE_CONTRACTS[network];
   }
 
   private getCacheKey(base: string, quote: string) {
@@ -44,6 +44,10 @@ export class ReflectorOracleClient {
     this.cache.set(key, { rate, timestamp: Date.now() });
   }
 
+  private getContractAddress(source: 'external_cex' | 'pubnet' | 'forex') {
+    return this.contracts[source];
+  }
+
   private async rateLimit() {
     const now = Date.now();
     const delta = now - this.lastRequestTime;
@@ -62,10 +66,10 @@ export class ReflectorOracleClient {
     return asNumber;
   }
 
-  private async lastPrice(base: string, quote: string): Promise<number> {
+  private async lastPrice(base: string, quote: string, source: 'external_cex' | 'pubnet' | 'forex'): Promise<number> {
     await this.rateLimit();
 
-    const contract = new Contract(this.contractAddress);
+    const contract = new Contract(this.getContractAddress(source));
     const op = contract.call(
       'lastprice',
       nativeToScVal(base, { type: 'string' }),
@@ -83,11 +87,11 @@ export class ReflectorOracleClient {
     return this.parseOracleResult(retval);
   }
 
-  // Optional helper for FX, kept for parity with existing hooks
+  // FX via FOREX oracle: USD -> currency
   async getFxRate(currency: string): Promise<number> {
     const cached = this.getFromCache('USD', currency);
     if (cached !== null) return cached;
-    const rate = await this.lastPrice('USD', currency);
+    const rate = await this.lastPrice('USD', currency, 'forex');
     this.setCache('USD', currency, rate);
     return rate;
   }
@@ -96,14 +100,30 @@ export class ReflectorOracleClient {
     const cached = this.getFromCache(assetCode, currency);
     if (cached !== null) return cached;
 
-    const price = await this.lastPrice(assetCode, currency);
-    this.setCache(assetCode, currency, price);
-    return price;
+    if (currency === 'USD') {
+      // Try EXTERNAL/CEX first, then fall back to PUBNET
+      try {
+        const price = await this.lastPrice(assetCode, 'USD', 'external_cex');
+        this.setCache(assetCode, 'USD', price);
+        return price;
+      } catch (_e) {
+        const price = await this.lastPrice(assetCode, 'USD', 'pubnet');
+        this.setCache(assetCode, 'USD', price);
+        return price;
+      }
+    }
+
+    // Non-USD currency: get USD price, then apply FX
+    const usdPrice = await this.getAssetPrice(assetCode, 'USD');
+    const fx = await this.getFxRate(currency);
+    const result = usdPrice * fx;
+    this.setCache(assetCode, currency, result);
+    return result;
   }
 
-  // Discovery of available currencies from the oracle (if supported)
+  // Discovery of available fiat currencies from FOREX oracle
   async listSupportedCurrencies(): Promise<string[]> {
-    const contract = new Contract(this.contractAddress);
+    const contract = new Contract(this.getContractAddress('forex'));
     const op = contract.call('supported_currencies');
     const sim: any = await this.server.simulateTransaction(op as any);
     if ('error' in sim) {
