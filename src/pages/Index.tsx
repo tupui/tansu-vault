@@ -99,7 +99,6 @@ const Index = () => {
                 <div className="aspect-video rounded-2xl overflow-hidden shadow-stellar border border-border/20">
                   <img src={tansuLogo} alt="Tansu DAO - Decentralized Project Treasury Management" className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-2xl" />
               </motion.div>
             </div>
           </div>
