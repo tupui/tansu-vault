@@ -5,9 +5,8 @@ import { VaultOperations } from '@/components/VaultOperations';
 import { useVaultData } from '@/hooks/useVaultData';
 
 export const Vault = () => {
-  const { walletXlm, vaultXlm, xlmUsd } = useVaultData();
+  const { walletXlm, vaultXlm, xlmFiatRate, totalFiatValue } = useVaultData();
   const totalXlm = (walletXlm ?? 0) + (vaultXlm ?? 0);
-  const totalUsd = xlmUsd != null ? totalXlm * xlmUsd : null;
   const fmtUSD = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
   const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 }));
 
@@ -34,7 +33,7 @@ export const Vault = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total (USD)</p>
-                  <p className="text-lg font-semibold">{totalUsd == null ? '—' : fmtUSD(totalUsd)}</p>
+                  <p className="text-lg font-semibold">{totalFiatValue == null ? '—' : fmtUSD(totalFiatValue)}</p>
                 </div>
               </div>
             </CardContent>

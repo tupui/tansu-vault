@@ -8,10 +8,9 @@ import { VaultOperations } from '@/components/VaultOperations';
 import { useVaultData } from '@/hooks/useVaultData';
 
 export const Dashboard = () => {
-  const { walletXlm, vaultXlm, xlmUsd, loading } = useVaultData();
+  const { walletXlm, vaultXlm, xlmFiatRate, totalFiatValue, loading } = useVaultData();
 
   const totalXlm = (walletXlm ?? 0) + (vaultXlm ?? 0);
-  const totalUsd = xlmUsd != null ? totalXlm * xlmUsd : null;
 
   const fmtUSD = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
   const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 }));
@@ -56,7 +55,7 @@ export const Dashboard = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Total Balance</p>
                       <p className="text-3xl font-bold">
-                        {totalUsd == null ? '—' : fmtUSD(totalUsd)}
+                        {totalFiatValue == null ? '—' : fmtUSD(totalFiatValue)}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {loading ? 'Loading balances…' : 'Live XLM price via Reflector'}

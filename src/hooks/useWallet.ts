@@ -7,9 +7,9 @@ import {
   getAccountBalances,
   switchNetwork,
   getCurrentNetwork,
-  type NetworkType
 } from '@/lib/stellar';
 import { FREIGHTER_ID, LOBSTR_ID, RABET_ID } from '@creit.tech/stellar-wallets-kit';
+import { useNetwork } from '@/contexts/NetworkContext';
 
 export interface WalletContextType {
   address: string | null;
@@ -17,11 +17,9 @@ export interface WalletContextType {
   isLoading: boolean;
   error: string | null;
   balances: any[];
-  network: NetworkType;
   connect: (walletId: string) => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
-  switchNetwork: (network: NetworkType) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -39,16 +37,15 @@ export const useWalletState = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
-  const [network, setNetwork] = useState<NetworkType>('TESTNET');
+  const { network } = useNetwork();
 
   const isConnected = !!address;
 
   useEffect(() => {
-    // Initialize wallet kit on mount
+    // Initialize wallet kit with current network on mount
     try {
-      const savedNetwork = (localStorage.getItem('tansu_network') as NetworkType) || 'TESTNET';
-      setNetwork(savedNetwork);
-      initWalletKit(savedNetwork);
+      const networkMapping = { 'mainnet': 'MAINNET', 'testnet': 'TESTNET' } as const;
+      initWalletKit(networkMapping[network]);
       
       // Try to restore previous connection
       const savedAddress = localStorage.getItem('tansu_wallet_address');
@@ -59,7 +56,7 @@ export const useWalletState = () => {
     } catch (err) {
       console.error('Failed to initialize wallet kit:', err);
     }
-  }, []);
+  }, [network]);
 
   const connect = async (walletId: string) => {
     setIsLoading(true);
@@ -98,41 +95,15 @@ export const useWalletState = () => {
     }
   };
 
-  const handleSwitchNetwork = async (newNetwork: NetworkType) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await switchNetwork(newNetwork);
-      setNetwork(newNetwork);
-      localStorage.setItem('tansu_network', newNetwork);
-      
-      // Reconnect wallet if connected
-      if (address) {
-        setAddress(null);
-        setBalances([]);
-        // Clear saved address to force reconnection
-        localStorage.removeItem('tansu_wallet_address');
-      }
-    } catch (err: any) {
-      setError(`Failed to switch to ${newNetwork}: ${err.message}`);
-      console.error('Network switch error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return {
     address,
     isConnected,
     isLoading,
     error,
     balances,
-    network,
     connect,
     disconnect,
     refreshBalances: () => refreshBalances(),
-    switchNetwork: handleSwitchNetwork,
   };
 };
 

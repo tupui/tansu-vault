@@ -1,22 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { getAccountBalances, getVaultBalance, fetchAssetPrice } from '@/lib/stellar';
+import { getAccountBalances, getVaultBalance } from '@/lib/stellar';
+import { getXlmFiatRate } from '@/lib/fiat-currencies';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 
 export interface VaultData {
   walletXlm: number | null;
   vaultXlm: number | null;
-  xlmUsd: number | null;
+  xlmFiatRate: number | null;
+  totalFiatValue: number | null;
   loading: boolean;
   error: string | null;
 }
 
 export const useVaultData = (): VaultData => {
   const { address, isConnected } = useWallet();
+  const { quoteCurrency } = useFiatCurrency();
   const [walletXlm, setWalletXlm] = useState<number | null>(null);
   const [vaultXlm, setVaultXlm] = useState<number | null>(null);
-  const [xlmUsd, setXlmUsd] = useState<number | null>(null);
+  const [xlmFiatRate, setXlmFiatRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const totalFiatValue = useMemo(() => {
+    if (walletXlm == null || vaultXlm == null || xlmFiatRate == null) return null;
+    return (walletXlm + vaultXlm) * xlmFiatRate;
+  }, [walletXlm, vaultXlm, xlmFiatRate]);
 
   useEffect(() => {
     let mounted = true;
@@ -53,16 +62,16 @@ export const useVaultData = (): VaultData => {
     let mounted = true;
     const loadPrice = async () => {
       try {
-        const price = await fetchAssetPrice('XLM', 'USD');
-        if (mounted) setXlmUsd(price || 0);
+        const rate = await getXlmFiatRate(quoteCurrency);
+        if (mounted) setXlmFiatRate(rate || 0);
       } catch {
-        if (mounted) setXlmUsd(null);
+        if (mounted) setXlmFiatRate(null);
       }
     };
     loadPrice();
     const id = setInterval(loadPrice, 60_000);
     return () => { mounted = false; clearInterval(id); };
-  }, []);
+  }, [quoteCurrency]);
 
-  return { walletXlm, vaultXlm, xlmUsd, loading, error };
+  return { walletXlm, vaultXlm, xlmFiatRate, totalFiatValue, loading, error };
 };

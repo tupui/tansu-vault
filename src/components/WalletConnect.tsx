@@ -13,13 +13,12 @@ import { useWallet, WALLET_TYPES } from '@/hooks/useWallet';
 import { useToast } from '@/hooks/use-toast';
 import { NetworkSelector } from '@/components/NetworkSelector';
 import { CurrencySelector } from '@/components/CurrencySelector';
-import { Wallet, LogOut, Loader2, CheckCircle, Settings } from 'lucide-react';
+import { Wallet, LogOut, Loader2, CheckCircle } from 'lucide-react';
 
 export const WalletConnect: React.FC = () => {
-  const { address, isConnected, isLoading, network, connect, disconnect, switchNetwork } = useWallet();
+  const { address, isConnected, isLoading, connect, disconnect } = useWallet();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>('USD');
 
   const handleConnect = async (walletId: string) => {
     try {
@@ -50,17 +49,8 @@ export const WalletConnect: React.FC = () => {
   if (isConnected && address) {
     return (
       <div className="flex items-center gap-3">
-        <NetworkSelector 
-          currentNetwork={network} 
-          onNetworkChange={switchNetwork}
-          disabled={isLoading}
-        />
-        
-        <CurrencySelector 
-          currentCurrency={currency}
-          onCurrencyChange={setCurrency}
-          compact
-        />
+        <NetworkSelector />
+        <CurrencySelector compact />
         
         <Badge variant="outline" className="flex items-center gap-2 px-3 py-1">
           <CheckCircle className="h-4 w-4 text-success" />
@@ -85,17 +75,8 @@ export const WalletConnect: React.FC = () => {
   // Disconnected state
   return (
     <div className="flex items-center gap-3">
-      <NetworkSelector 
-        currentNetwork={network} 
-        onNetworkChange={switchNetwork}
-        disabled={isLoading}
-      />
-      
-      <CurrencySelector 
-        currentCurrency={currency}
-        onCurrencyChange={setCurrency}
-        compact
-      />
+      <NetworkSelector />
+      <CurrencySelector compact />
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
@@ -113,7 +94,7 @@ export const WalletConnect: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Connect Your Wallet</DialogTitle>
             <DialogDescription>
-              Choose a wallet to connect to Tansu Vault on {network}
+              Choose a wallet to connect to Tansu Vault
             </DialogDescription>
           </DialogHeader>
           
