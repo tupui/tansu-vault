@@ -66,6 +66,12 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
 
       onProjectSelect(project, walletAddress);
       
+      // Persist selection so other pages (e.g., Vault) can read it
+      try {
+        localStorage.setItem('selectedProject', JSON.stringify(project));
+        localStorage.setItem('selectedProjectWalletAddress', walletAddress);
+      } catch {}
+      
       toast({
         title: 'Project Selected',
         description: `Connected to ${project.name} project vault.`,
