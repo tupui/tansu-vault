@@ -1,4 +1,5 @@
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
+import { Contract, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { getNetworkConfig } from './appConfig';
 import { isValidDomain, isValidPublicKey } from './validation';
 
@@ -23,29 +24,52 @@ export const initializeDomainRPC = (network: string): void => {
  * Resolve a Soroban domain to a Stellar address
  */
 export const resolveSorobanDomain = async (domain: string, network: string): Promise<string | null> => {
-  if (!domain || !isValidDomain(domain)) {
-    return null;
-  }
-
-  // If it's already a valid public key, return as-is
-  if (isValidPublicKey(domain)) {
-    return domain;
-  }
-
   try {
-    // Initialize RPC if needed
-    initializeDomainRPC(network);
-    
-    if (!rpcServer) {
-      throw new Error('RPC server not initialized');
+    if (!isValidDomain(domain)) {
+      throw new Error('Invalid domain format');
     }
 
-    // For now, return null as domain resolution needs proper contract integration
-    // This would require calling the actual Soroban domain contract
-    console.log(`Domain resolution for ${domain} is not yet implemented`);
+    const networkConfig = getNetworkConfig(network);
+    if (!networkConfig.sorobanDomainContract) {
+      throw new Error('Domain resolution not supported on this network');
+    }
+
+    const server = new SorobanServer(networkConfig.sorobanRpcUrl);
+    const contract = new Contract(networkConfig.sorobanDomainContract);
+
+    // Call the domain contract to resolve the domain
+    const op = contract.call('resolve', nativeToScVal(domain, { type: 'string' }));
+    const sim: any = await server.simulateTransaction(op as any);
+
+    if ('error' in sim) {
+      throw new Error(`Domain resolution failed: ${sim.error}`);
+    }
+
+    const retval = sim.result?.retval as xdr.ScVal | undefined;
+    if (!retval) {
+      return null;
+    }
+
+    const result = scValToNative(retval);
+    
+    // Handle different response formats
+    if (typeof result === 'string' && isValidPublicKey(result)) {
+      return result;
+    }
+    
+    if (typeof result === 'object' && result !== null) {
+      // Check for common address field names
+      const addressFields = ['address', 'stellar_address', 'public_key', 'account'];
+      for (const field of addressFields) {
+        if (field in result && typeof result[field] === 'string' && isValidPublicKey(result[field])) {
+          return result[field];
+        }
+      }
+    }
+
     return null;
   } catch (error) {
-    console.warn(`Failed to resolve domain ${domain}:`, error);
+    console.error('Domain resolution error:', error);
     return null;
   }
 };

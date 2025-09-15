@@ -14,6 +14,8 @@ import {
   Asset,
   Contract,
   nativeToScVal,
+  scValToNative,
+  xdr,
   StrKey,
 } from '@stellar/stellar-sdk';
 import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
@@ -316,10 +318,21 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
 export const getVaultTotalBalance = async (): Promise<string> => {
   try {
     const contracts = getContractAddresses();
-    // TODO: Query the vault contract for total balance across all users
-    // This would require calling a contract method like "get_total_deposits" 
-    // For now, return placeholder until we can implement proper contract call
-    return "0";
+    const contract = new Contract(contracts.XLM_HODL_VAULT);
+    
+    // Call the vault contract to get total managed assets
+    const op = contract.call('get_total_managed_funds');
+    const sim: any = await rpcServer.simulateTransaction(op as any);
+    
+    if ('error' in sim) {
+      throw new Error(`Vault query error: ${sim.error}`);
+    }
+
+    const retval = sim.result?.retval as xdr.ScVal | undefined;
+    if (!retval) return "0";
+
+    const result = scValToNative(retval);
+    return formatAssetAmount(result.toString());
   } catch (error) {
     console.error('Failed to get vault total balance:', error);
     return "0";
@@ -329,10 +342,21 @@ export const getVaultTotalBalance = async (): Promise<string> => {
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
   try {
     const contracts = getContractAddresses();
-    // TODO: Query the vault contract for user-specific balance
-    // This would require calling a contract method like "get_user_balance(userAddress)"
-    // For now, return placeholder until we can implement proper contract call
-    return "0";
+    const contract = new Contract(contracts.XLM_HODL_VAULT);
+    
+    // Call the vault contract to get user-specific balance
+    const op = contract.call('get_user_balance', nativeToScVal(userAddress, { type: 'address' }));
+    const sim: any = await rpcServer.simulateTransaction(op as any);
+    
+    if ('error' in sim) {
+      throw new Error(`Vault balance query error: ${sim.error}`);
+    }
+
+    const retval = sim.result?.retval as xdr.ScVal | undefined;
+    if (!retval) return "0";
+
+    const result = scValToNative(retval);
+    return formatAssetAmount(result.toString());
   } catch (error) {
     console.error('Failed to get vault user balance:', error);
     return "0";

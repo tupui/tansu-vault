@@ -1,4 +1,6 @@
-// Tansu contract integration for project search and domain resolution
+import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
+import { Contract, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { getNetworkConfig, getContractAddresses } from './appConfig';
 
 
 export interface TansuProject {
@@ -104,22 +106,28 @@ export async function getProjectVaultStats(projectWalletAddress: string): Promis
   yieldEarned: string;
 }> {
   try {
-    // TODO: Get actual vault balance for this specific project's wallet
-    // This should call our vault contract methods with the project's wallet address
+    const contracts = getContractAddresses();
+    const contract = new Contract(contracts.TANSU_PROJECT);
     
-    return {
-      vaultBalance: '0',
-      walletBalance: '0', 
-      totalDeposited: '0',
-      yieldEarned: '0'
-    };
+    // Call the project contract to get vault balance for this project
+    const op = contract.call(
+      'get_project_vault_balance', 
+      nativeToScVal(projectId, { type: 'string' })
+    );
+    const rpcServer = new SorobanServer(getNetworkConfig('testnet').sorobanRpcUrl);
+    const sim: any = await rpcServer.simulateTransaction(op as any);
+    
+    if ('error' in sim) {
+      throw new Error(`Project vault balance query error: ${sim.error}`);
+    }
+
+    const retval = sim.result?.retval as xdr.ScVal | undefined;
+    if (!retval) return 0;
+
+    const result = scValToNative(retval);
+    return parseFloat(result.toString()) / 10_000_000; // Convert from stroops
   } catch (error) {
-    console.error('Failed to get project vault stats:', error);
-    return {
-      vaultBalance: '0',
-      walletBalance: '0',
-      totalDeposited: '0', 
-      yieldEarned: '0'
-    };
+    console.error('Failed to get project vault balance:', error);
+    return 0;
   }
 }

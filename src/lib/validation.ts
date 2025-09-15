@@ -39,13 +39,21 @@ export const isValidAmount = (amount: string | number): boolean => {
  * Validates if a domain name is valid for Soroban domains
  */
 export const isValidDomain = (domain: string): boolean => {
-  if (!domain || typeof domain !== 'string') {
-    return false;
+  if (typeof domain !== 'string' || domain.length === 0) return false;
+  
+  // Check for .xlm domains specifically
+  if (domain.endsWith('.xlm')) {
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.xlm$/;
+    return domainRegex.test(domain);
   }
   
-  // Basic domain validation - should end with .xlm
-  const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.xlm$/;
-  return domainRegex.test(domain) && domain.length <= 64;
+  // General domain validation
+  const generalDomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/;
+  return domain.length <= 253 && 
+         generalDomainRegex.test(domain) &&
+         !domain.startsWith('-') &&
+         !domain.endsWith('-') &&
+         !domain.includes('..');
 };
 
 /**
@@ -61,35 +69,52 @@ export const isValidXDR = (xdr: string): boolean => {
 };
 
 /**
- * Sanitizes error messages for user display
+ * Validates if a string looks like a Stellar address or domain
  */
-export const sanitizeError = (error: unknown): string => {
+export const isValidAddressOrDomain = (input: string): boolean => {
+  return isValidPublicKey(input) || isValidDomain(input);
+};
+
+/**
+ * Format a Stellar address for display
+ */
+export const formatAddress = (address: string, chars: number = 4): string => {
+  if (!address || address.length <= chars * 2) return address;
+  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+};
+
+/**
+ * Enhanced error sanitization with structured return
+ */
+export const sanitizeError = (error: unknown): { userMessage: string; originalError?: string } => {
   if (typeof error === 'string') {
-    return error;
+    return { userMessage: error };
   }
   
   if (error instanceof Error) {
+    let userMessage = error.message;
+    
     // Common Stellar error patterns
     if (error.message.includes('op_under_dest_min')) {
-      return 'Amount is below the minimum required';
-    }
-    if (error.message.includes('op_insufficient_balance')) {
-      return 'Insufficient balance for this transaction';
-    }
-    if (error.message.includes('tx_bad_seq')) {
-      return 'Transaction sequence number is invalid. Please try again.';
-    }
-    if (error.message.includes('op_malformed')) {
-      return 'Transaction is malformed. Please check your inputs.';
-    }
-    if (error.message.includes('op_no_trust')) {
-      return 'You need to add a trustline for this asset first';
+      userMessage = 'Amount is below the minimum required';
+    } else if (error.message.includes('op_insufficient_balance')) {
+      userMessage = 'Insufficient balance for this transaction';
+    } else if (error.message.includes('tx_bad_seq')) {
+      userMessage = 'Transaction sequence number is invalid. Please try again.';
+    } else if (error.message.includes('op_malformed')) {
+      userMessage = 'Transaction is malformed. Please check your inputs.';
+    } else if (error.message.includes('op_no_trust')) {
+      userMessage = 'You need to add a trustline for this asset first';
+    } else if (error.message.includes('User rejected')) {
+      userMessage = 'Transaction was rejected by user';
+    } else if (error.message.includes('Failed to connect')) {
+      userMessage = 'Failed to connect to wallet. Please try again.';
     }
     
-    return error.message;
+    return { userMessage, originalError: error.message };
   }
   
-  return 'An unexpected error occurred';
+  return { userMessage: 'An unexpected error occurred' };
 };
 
 /**
@@ -109,11 +134,4 @@ export const formatStellarAmount = (amount: string | number): string => {
   } catch {
     return '0';
   }
-};
-
-/**
- * Validates if a string looks like a Stellar address or domain
- */
-export const isValidAddressOrDomain = (input: string): boolean => {
-  return isValidPublicKey(input) || isValidDomain(input);
 };

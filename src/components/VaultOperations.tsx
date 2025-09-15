@@ -62,7 +62,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
       toast({
         variant: "destructive",
         title: "Deposit Failed",
-        description: sanitizeError(error),
+        description: sanitizeError(error).userMessage,
       });
     } finally {
       setIsLoading(false);
@@ -109,7 +109,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
       toast({
         variant: "destructive",
         title: "Withdrawal Failed",
-        description: sanitizeError(error),
+        description: sanitizeError(error).userMessage,
       });
     } finally {
       setIsLoading(false);
