@@ -247,10 +247,30 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
   }
 };
 
+export const getVaultTotalBalance = async (): Promise<string> => {
+  try {
+    const contracts = getContractAddresses();
+    // TODO: Query the vault contract for total balance across all users
+    // This would require calling a contract method like "get_total_deposits" 
+    // For now, return placeholder until we can implement proper contract call
+    return "0";
+  } catch (error) {
+    console.error('Failed to get vault total balance:', error);
+    return "0";
+  }
+};
+
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
-  // TODO: Implement actual vault balance fetching from contract
-  // For now, return placeholder
-  return "0";
+  try {
+    const contracts = getContractAddresses();
+    // TODO: Query the vault contract for user-specific balance
+    // This would require calling a contract method like "get_user_balance(userAddress)"
+    // For now, return placeholder until we can implement proper contract call
+    return "0";
+  } catch (error) {
+    console.error('Failed to get vault user balance:', error);
+    return "0";
+  }
 };
 
 // Pricing utilities using Reflector Network

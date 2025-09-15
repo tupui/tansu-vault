@@ -1,13 +1,26 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Leaf, Users, DollarSign } from 'lucide-react';
+import { useVaultTVL } from '@/hooks/useVaultTVL';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { formatFiatAmount } from '@/lib/fiat-currencies';
 
 export const VaultStats = () => {
+  const { totalFiatValue, loading, error } = useVaultTVL();
+  const { getCurrentCurrency } = useFiatCurrency();
+  
+  const currentCurrency = getCurrentCurrency();
+  
+  const formatValue = (value: number | null) => {
+    if (value == null) return '—';
+    return formatFiatAmount(value, currentCurrency);
+  };
+
   const stats = [
     {
       title: 'Total Value Locked',
-      value: '—',
+      value: loading ? 'Loading...' : formatValue(totalFiatValue),
       change: '',
-      changeType: 'neutral',
+      changeType: 'neutral' as const,
       icon: DollarSign,
       gradient: 'bg-gradient-vault'
     },
@@ -15,7 +28,7 @@ export const VaultStats = () => {
       title: 'Annual Yield',
       value: '—',
       change: '',
-      changeType: 'neutral',
+      changeType: 'neutral' as const,
       icon: TrendingUp,
       gradient: 'bg-gradient-stellar'
     },
@@ -23,7 +36,7 @@ export const VaultStats = () => {
       title: 'Active Projects',
       value: '—',
       change: '',
-      changeType: 'neutral',
+      changeType: 'neutral' as const,
       icon: Users,
       gradient: 'bg-gradient-surface'
     },
@@ -31,7 +44,7 @@ export const VaultStats = () => {
       title: 'Carbon Offset',
       value: '—',
       change: '',
-      changeType: 'neutral',
+      changeType: 'neutral' as const,
       icon: Leaf,
       gradient: 'bg-gradient-carbon'
     }
@@ -52,7 +65,10 @@ export const VaultStats = () => {
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stat.value}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Data will appear once funds are deposited and metrics are available
+              {stat.title === 'Total Value Locked' ? 
+                (error ? 'Failed to load vault data' : 'Live vault balance across all users') :
+                'Data will appear once funds are deposited and metrics are available'
+              }
             </p>
           </CardContent>
         </Card>

@@ -2,11 +2,21 @@ import { Button } from '@/components/ui/button';
 import { WalletConnect } from './WalletConnect';
 import { Vault, Leaf, Settings, BarChart3 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { StratumWalletModal } from './StratumWalletModal';
+import { useWallet } from '@/hooks/useWallet';
+import { useNetwork } from '@/contexts/NetworkContext';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 
 export const Navigation = () => {
   const location = useLocation();
+  const { isConnected, address, disconnect } = useWallet();
+  const { network } = useNetwork();
+  const { getCurrentCurrency } = useFiatCurrency();
+  const [showWalletModal, setShowWalletModal] = useState(false);
   
   const isActive = (path: string) => location.pathname === path;
+  const currentCurrency = getCurrentCurrency();
   
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border glass backdrop-blur-xl">
@@ -68,9 +78,44 @@ export const Navigation = () => {
           </Button>
         </div>
 
-        {/* Wallet Connection */}
-        <WalletConnect />
+        {/* Wallet Connection - Stratum Style */}
+        <div className="flex items-center gap-3">
+          {/* Network & Currency Display */}
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="text-xs bg-background/50 px-2 py-1 rounded border border-border/50">
+              <span className="text-muted-foreground">{network === 'testnet' ? 'Testnet' : 'Mainnet'}</span>
+            </div>
+            <div className="text-xs bg-background/50 px-2 py-1 rounded border border-border/50 font-mono">
+              {currentCurrency.symbol} {currentCurrency.code}
+            </div>
+          </div>
+
+          {isConnected && address ? (
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-mono bg-success/10 text-success px-3 py-1 rounded border border-success/20">
+                {`${address.slice(0, 4)}...${address.slice(-4)}`}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={disconnect}
+              >
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setShowWalletModal(true)}>
+              Connect Wallet
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Stratum Wallet Modal */}
+      <StratumWalletModal 
+        open={showWalletModal} 
+        onOpenChange={setShowWalletModal} 
+      />
     </nav>
   );
 };
