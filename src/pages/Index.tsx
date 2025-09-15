@@ -80,31 +80,22 @@ const Index = () => {
                 </div>
 
                 {/* Stats */}
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="pt-8"
-                >
+                <motion.div initial={{
+                opacity: 0,
+                y: 20
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.6,
+                delay: 0.2
+              }} className="pt-8">
                   <VaultStats />
                 </motion.div>
               </motion.div>
 
               {/* Hero image - hidden on mobile, shown on larger screens */}
-              <motion.div initial={{
-              opacity: 0,
-              scale: 0.95
-            }} animate={{
-              opacity: 1,
-              scale: 1
-            }} transition={{
-              duration: 0.8,
-              delay: 0.2
-            }} className="hidden lg:block lg:w-96 xl:w-[500px]">
-                <div className="aspect-video rounded-2xl overflow-hidden shadow-stellar border border-border/20">
-                  <img src={tansuLogo} alt="Tansu DAO - Decentralized Project Treasury Management" className="w-full h-full object-cover" />
-                </div>
-              </motion.div>
+              
             </div>
           </div>
         </section>
