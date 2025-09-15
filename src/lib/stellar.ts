@@ -8,15 +8,12 @@ import {
 } from '@creit.tech/stellar-wallets-kit';
 import {
   Horizon,
-  Keypair,
   Networks,
-  Operation,
   TransactionBuilder,
   Account,
   Asset,
-  BASE_FEE,
-  TimeoutInfinite,
-  xdr as StellarXDR,
+  Contract,
+  nativeToScVal,
 } from '@stellar/stellar-sdk';
 import testnetContracts from '@/config/testnet.contracts.json';
 
@@ -164,49 +161,39 @@ const buildContractTransaction = async (
   userAddress: string,
   contractAddress: string,
   method: string,
-  args: any[] = []
-): Promise<string> => {
+  params: any[] = []
+) => {
   const account = await loadAccount(userAddress);
-  const networkPassphrase = NETWORK_DETAILS[currentNetwork].network;
-  
-  const transaction = new TransactionBuilder(account, {
-    fee: BASE_FEE,
-    networkPassphrase,
-  })
-    .addOperation(
-      Operation.invokeContract({
-        contract: contractAddress,
-        function: method,
-        args: args,
-      })
-    )
-    .setTimeout(TimeoutInfinite)
-    .build();
+  const contract = new Contract(contractAddress);
 
-  return transaction.toXDR();
+  const operation = contract.call(
+    method,
+    ...params
+  );
+
+  return new TransactionBuilder(account, {
+    fee: '100000',
+    networkPassphrase: NETWORK_DETAILS[currentNetwork].network,
+  })
+    .addOperation(operation)
+    .setTimeout(30)
+    .build();
 };
 
 export const depositToVault = async (userAddress: string, amount: string): Promise<string> => {
   try {
     const contracts = getContractAddresses();
-    
-    // Build transaction for vault deposit
-    const xdr = await buildContractTransaction(
+
+    const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'deposit',
-      [
-        // Add proper arguments for deposit method
-        // Amount in stroops (1 XLM = 10,000,000 stroops)
-        xdr.ScVal.scvI128(xdr.Int128Parts.fromString((parseFloat(amount) * 10_000_000).toString())),
-      ]
+      [nativeToScVal(amount, { type: 'i128' })]
     );
 
-    // Sign and submit transaction
-    const signedXdr = await signTransaction(xdr);
-    const transaction = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-    const result = await getHorizonServer().submitTransaction(transaction);
-    
+    const signedXdr = await signTransaction(transaction.toXDR());
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
+    const result = await getHorizonServer().submitTransaction(signedTx);
     return result.hash;
   } catch (error) {
     console.error('Deposit failed:', error);
@@ -217,23 +204,17 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
 export const withdrawFromVault = async (userAddress: string, amount: string): Promise<string> => {
   try {
     const contracts = getContractAddresses();
-    
-    // Build transaction for vault withdrawal
-    const xdr = await buildContractTransaction(
+
+    const transaction = await buildContractTransaction(
       userAddress,
       contracts.XLM_HODL_VAULT,
       'withdraw',
-      [
-        // Add proper arguments for withdraw method
-        xdr.ScVal.scvI128(xdr.Int128Parts.fromString((parseFloat(amount) * 10_000_000).toString())),
-      ]
+      [nativeToScVal(amount, { type: 'i128' })]
     );
 
-    // Sign and submit transaction
-    const signedXdr = await signTransaction(xdr);
-    const transaction = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-    const result = await getHorizonServer().submitTransaction(transaction);
-    
+    const signedXdr = await signTransaction(transaction.toXDR());
+    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
+    const result = await getHorizonServer().submitTransaction(signedTx);
     return result.hash;
   } catch (error) {
     console.error('Withdrawal failed:', error);

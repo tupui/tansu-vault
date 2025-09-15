@@ -34,9 +34,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
     
     setIsLoading(true);
     try {
-      // Using native XLM asset for now
-      const xlmAsset = { isNative: () => true };
-      await depositToVault(address, depositAmount, xlmAsset as any);
+      await depositToVault(address, depositAmount);
       
       toast({
         title: "Deposit Successful",
