@@ -12,17 +12,20 @@ import { useState } from 'react';
 import { TansuProject } from '@/lib/tansu-contracts';
 import { formatFiatAmount } from '@/lib/fiat-currencies';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-
 export const Dashboard = () => {
-  const { address: connectedWallet, isConnected } = useWallet();
-  const { getCurrentCurrency } = useFiatCurrency();
+  const {
+    address: connectedWallet,
+    isConnected
+  } = useWallet();
+  const {
+    getCurrentCurrency
+  } = useFiatCurrency();
   const [selectedProject, setSelectedProject] = useState<TansuProject | null>(null);
   const [projectWalletAddress, setProjectWalletAddress] = useState<string | null>(null);
-
   const {
     project,
     vaultBalance,
-    walletBalance, 
+    walletBalance,
     totalBalance,
     totalFiatValue,
     isMaintainer,
@@ -30,20 +33,17 @@ export const Dashboard = () => {
     loading,
     error
   } = useProjectVault(selectedProject, projectWalletAddress, connectedWallet);
-
   const currentCurrency = getCurrentCurrency();
-  const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+  const fmt = (n: number | null | undefined) => n == null ? '—' : n.toLocaleString(undefined, {
+    maximumFractionDigits: 2
+  });
   const fmtFiat = (n: number | null) => n == null ? '—' : formatFiatAmount(n, currentCurrency);
-
   const handleProjectSelect = (project: TansuProject, walletAddress: string) => {
     setSelectedProject(project);
     setProjectWalletAddress(walletAddress);
   };
-
   const recentTransactions: any[] = [];
-
-  return (
-    <Layout>
+  return <Layout>
       <Navigation />
       
       <div className="pt-24 pb-12 px-6">
@@ -61,15 +61,11 @@ export const Dashboard = () => {
 
           {/* Project Search */}
           <div className="mt-8">
-            <ProjectSearch 
-              onProjectSelect={handleProjectSelect}
-              selectedProject={selectedProject}
-            />
+            <ProjectSearch onProjectSelect={handleProjectSelect} selectedProject={selectedProject} />
           </div>
 
           {/* Project Vault Management - Only when project selected */}
-          {selectedProject && projectWalletAddress && (
-            <div className="mt-8 space-y-6">
+          {selectedProject && projectWalletAddress && <div className="mt-8 space-y-6">
               {/* Maintainer Status & Connection */}
               <Card className="glass border-border/50">
                 <CardContent className="p-6">
@@ -81,30 +77,20 @@ export const Dashboard = () => {
                       <div>
                         <h3 className="font-semibold">Maintainer Status</h3>
                         <p className="text-sm text-muted-foreground">
-                          {isConnected && connectedWallet ? 
-                            (isMaintainer ? 
-                              `You are a maintainer of ${selectedProject.name}` :
-                              `You are not a maintainer of ${selectedProject.name}`
-                            ) : 
-                            'Connect your wallet to check maintainer status'
-                          }
+                          {isConnected && connectedWallet ? isMaintainer ? `You are a maintainer of ${selectedProject.name}` : `You are not a maintainer of ${selectedProject.name}` : 'Connect your wallet to check maintainer status'}
                         </p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {isConnected && isMaintainer && (
-                        <Badge className="bg-success/10 text-success border-success/20">
+                      {isConnected && isMaintainer && <Badge className="bg-success/10 text-success border-success/20">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Authorized
-                        </Badge>
-                      )}
-                      {isConnected && !isMaintainer && (
-                        <Badge variant="secondary">
+                        </Badge>}
+                      {isConnected && !isMaintainer && <Badge variant="secondary">
                           <Users className="w-3 h-3 mr-1" />
                           Unauthorized
-                        </Badge>
-                      )}
+                        </Badge>}
                     </div>
                   </div>
                 </CardContent>
@@ -153,11 +139,9 @@ export const Dashboard = () => {
                         </div>
                       </div>
 
-                      {error && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+                      {error && <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                           {error}
-                        </div>
-                      )}
+                        </div>}
                     </div>
                   </CardContent>
                 </Card>
@@ -169,24 +153,12 @@ export const Dashboard = () => {
                     <CardDescription>Latest vault transactions</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {recentTransactions.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-4 rounded-lg bg-surface-elevated/50 border border-border/30">
+                    {recentTransactions.length === 0 ? <div className="text-sm text-muted-foreground p-4 rounded-lg bg-surface-elevated/50 border border-border/30">
                         No activity yet. Deposit funds to see transactions here.
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {recentTransactions.map((tx) => (
-                          <div key={tx.id} className="flex items-center gap-3 p-3 rounded-lg bg-surface-elevated/50 border border-border/30">
-                            <div className={`p-2 rounded-full ${
-                              tx.type === 'deposit' ? 'bg-deposit-blue/20' :
-                              tx.type === 'withdraw' ? 'bg-withdraw-orange/20' :
-                              'bg-vault-yield/20'
-                            }`}>
-                              {tx.type === 'deposit' ? (
-                                <ArrowUpRight className="h-4 w-4 text-deposit-blue" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4 text-vault-yield" />
-                              )}
+                      </div> : <div className="space-y-4">
+                        {recentTransactions.map(tx => <div key={tx.id} className="flex items-center gap-3 p-3 rounded-lg bg-surface-elevated/50 border border-border/30">
+                            <div className={`p-2 rounded-full ${tx.type === 'deposit' ? 'bg-deposit-blue/20' : tx.type === 'withdraw' ? 'bg-withdraw-orange/20' : 'bg-vault-yield/20'}`}>
+                              {tx.type === 'deposit' ? <ArrowUpRight className="h-4 w-4 text-deposit-blue" /> : <CheckCircle className="h-4 w-4 text-vault-yield" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium capitalize">{tx.type}</p>
@@ -198,29 +170,20 @@ export const Dashboard = () => {
                                 {tx.timestamp}
                               </p>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          </div>)}
+                      </div>}
                   </CardContent>
                 </Card>
               </div>
 
               {/* Vault Operations - Only show if user is a maintainer */}
-              {canManageVault && (
-                <VaultOperations 
-                  userBalance={(walletBalance ?? 0).toString()}
-                  vaultBalance={(vaultBalance ?? 0).toString()}
-                  onOperationComplete={() => {
-                    // Refresh project vault data
-                    window.location.reload(); // Simple refresh for now
-                  }}
-                />
-              )}
+              {canManageVault && <VaultOperations userBalance={(walletBalance ?? 0).toString()} vaultBalance={(vaultBalance ?? 0).toString()} onOperationComplete={() => {
+            // Refresh project vault data
+            window.location.reload(); // Simple refresh for now
+          }} />}
 
               {/* Not authorized message */}
-              {selectedProject && isConnected && !canManageVault && (
-                <Card className="glass border-border/50">
+              {selectedProject && isConnected && !canManageVault && <Card className="glass border-border/50">
                   <CardContent className="p-8 text-center">
                     <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Maintainer Access Required</h3>
@@ -230,50 +193,16 @@ export const Dashboard = () => {
                       is not listed as a maintainer for {selectedProject.name}.
                     </p>
                   </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+                </Card>}
+            </div>}
 
           {/* Empty state - no project selected */}
-          {!selectedProject && (
-            <div className="mt-8">
+          {!selectedProject && <div className="mt-8">
               <Card className="glass border-border/50">
-                <CardContent className="p-12 text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Select a Tansu Project</h3>
-                  <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                    Search for and select a Tansu project above to view its treasury vault, 
-                    check your maintainer status, and manage vault operations.
-                  </p>
-                  <div className="grid md:grid-cols-3 gap-4 text-sm max-w-lg mx-auto">
-                    <div className="text-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-primary font-bold">1</span>
-                      </div>
-                      <p className="font-medium">Search Projects</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-primary font-bold">2</span>
-                      </div>
-                      <p className="font-medium">Connect Wallet</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-primary font-bold">3</span>
-                      </div>
-                      <p className="font-medium">Manage Vault</p>
-                    </div>
-                  </div>
-                </CardContent>
+                
               </Card>
-            </div>
-          )}
+            </div>}
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
