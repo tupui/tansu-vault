@@ -193,24 +193,7 @@ const Index = () => {
             once: true
           }}>
               <Card className="glass border-border/50 shadow-stellar">
-                <CardContent className="p-12 text-center">
-                  <h3 className="text-3xl font-bold mb-4">
-                    Ready to optimize your project treasury?
-                  </h3>
-                  <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                    Join the growing ecosystem of Tansu projects earning sustainable yields 
-                    while contributing to carbon neutrality.
-                  </p>
-                  <div className="flex flex-wrap gap-4 justify-center">
-                    <Button size="lg" className="bg-gradient-stellar text-primary-foreground border-0 glow-stellar hover:shadow-stellar transition-all duration-300">
-                      Connect Wallet & Start
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                    <Button size="lg" variant="outline" className="border-border hover:bg-surface-elevated">
-                      Learn More
-                    </Button>
-                  </div>
-                </CardContent>
+                
               </Card>
             </motion.div>
           </div>
