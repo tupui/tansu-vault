@@ -6,11 +6,14 @@ import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { formatFiatAmount } from '@/lib/fiat-currencies';
 
 export const VaultStats = () => {
-  const { totalFiatValue, loading, error } = useVaultTVL();
+  const { totalXlm, xlmFiatRate, loading, error } = useVaultTVL();
   const { getCurrentCurrency } = useFiatCurrency();
   const { formatFiatAmount: formatWithHook } = useFiatConversion();
   
   const currentCurrency = getCurrentCurrency();
+  
+  // Calculate fiat value with current currency rate (recalculates when currency changes)
+  const totalFiatValue = totalXlm != null && xlmFiatRate != null ? totalXlm * xlmFiatRate : null;
   
   const formatValue = (value: number | null) => {
     if (value == null) return '—';

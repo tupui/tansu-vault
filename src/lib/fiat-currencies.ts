@@ -68,7 +68,23 @@ export const getXlmFiatRate = async (
   fiatCurrency: string,
   network?: string
 ): Promise<number> => {
-  return await getAssetPrice('XLM'); // Always use mainnet for pricing
+  try {
+    // Get XLM price in USD from Reflector
+    const xlmUsdPrice = await getAssetPrice('XLM'); // Always use mainnet for pricing
+    
+    if (fiatCurrency.toUpperCase() === 'USD') {
+      return xlmUsdPrice;
+    }
+    
+    // Convert USD to target currency
+    const { getUsdFxRate } = await import('./fx');
+    const usdToTargetRate = await getUsdFxRate(fiatCurrency);
+    
+    return xlmUsdPrice * usdToTargetRate;
+  } catch (error) {
+    console.error('Failed to get XLM fiat rate:', error);
+    return 0;
+  }
 };
 
 /**

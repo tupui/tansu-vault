@@ -36,7 +36,9 @@ export const useFiatConversion = (): UseFiatConversionReturn => {
         throw new Error('Amount must be positive');
       }
 
-      const rate = await getAssetPrice('XLM'); // Always uses mainnet
+      // Get XLM price in the target currency
+      const { getXlmFiatRate } = await import('@/lib/fiat-currencies');
+      const rate = await getXlmFiatRate(quoteCurrency);
       
       const fiatAmount = decimal.mul(rate).toNumber();
       
@@ -113,7 +115,19 @@ export const useAmountToFiat = (amount: string | number, assetCode: string = 'XL
 
       try {
         const decimal = new Decimal(amount);
-        const rate = await getAssetPrice(assetCode); // Always uses mainnet
+        
+        // Get asset price in the target currency
+        let rate;
+        if (assetCode === 'XLM') {
+          const { getXlmFiatRate } = await import('@/lib/fiat-currencies');
+          rate = await getXlmFiatRate(quoteCurrency);
+        } else {
+          // For other assets, get USD price and convert
+          const usdRate = await getAssetPrice(assetCode);
+          const { getUsdFxRate } = await import('@/lib/fx');
+          const usdToTargetRate = await getUsdFxRate(quoteCurrency);
+          rate = usdRate * usdToTargetRate;
+        }
         
         const fiatAmount = decimal.mul(rate).toNumber();
 
