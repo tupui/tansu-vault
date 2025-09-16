@@ -21,7 +21,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     horizonUrl: 'https://horizon-testnet.stellar.org',
     sorobanRpcUrl: 'https://soroban-testnet.stellar.org:443',
     networkPassphrase: 'Test SDF Network ; September 2015',
-    sorobanDomainContract: 'CDODLZIO3OY5ZBCNYQALDZWLW2NN533WIDZUDNW2NRWJGLTWSABGSMH7',
+    sorobanDomainContract: 'CAQWEZNN5X7LFD6PZBQXALVH4LSJW2KGNDMFJBQ3DWHXUVQ2JIZ6AQU6',
     tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
   }
 };
