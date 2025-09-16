@@ -1,6 +1,6 @@
-import { Contract, xdr, nativeToScVal } from '@stellar/stellar-sdk';
+import { Contract, xdr, nativeToScVal, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { REFLECTOR_ORACLE_CONTRACTS } from './appConfig';
+import { REFLECTOR_ORACLE_CONTRACTS, getNetworkConfig } from './appConfig';
 import { parseAsset, AssetInfo, AssetType } from './reflector-client/asset-type';
 import { buildAssetScVal, parseSorobanResult, scalePrice } from './reflector-client/xdr-helper';
 
@@ -44,6 +44,7 @@ class ReflectorPriceEngine {
   private assetListCache = new Map<string, CachedAssetList>();
   private requestQueue = new Map<string, Promise<number>>();
   private network: 'mainnet' | 'testnet';
+  private networkPassphrase: string;
   
   // Rate limiting
   private readonly WINDOW_MS = 10_000; // 10 seconds
@@ -67,6 +68,9 @@ class ReflectorPriceEngine {
     REFLECTOR_ORACLES.CEX_DEX.contract = contracts.external_cex;
     REFLECTOR_ORACLES.STELLAR.contract = contracts.pubnet;
     REFLECTOR_ORACLES.FX.contract = contracts.forex;
+
+    // Network passphrase for transaction simulation
+    this.networkPassphrase = getNetworkConfig(network).networkPassphrase;
   }
 
   private getCacheKey(asset: string, quote: string): string {
@@ -76,19 +80,40 @@ class ReflectorPriceEngine {
   private getFromCache(asset: string, quote: string): number | null {
     const key = this.getCacheKey(asset, quote);
     const cached = this.priceCache.get(key);
-    if (!cached) return null;
-    
-    if (Date.now() - cached.timestamp > this.PRICE_CACHE_DURATION) {
+    if (cached) {
+      if (Date.now() - cached.timestamp <= this.PRICE_CACHE_DURATION) {
+        return cached.price;
+      }
       this.priceCache.delete(key);
-      return null;
     }
-    
-    return cached.price;
+
+    // Fallback to localStorage
+    try {
+      const lsKey = `reflector_price:${this.network}:${key}`;
+      const raw = localStorage.getItem(lsKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { price: number; timestamp: number };
+        if (Date.now() - parsed.timestamp <= this.PRICE_CACHE_DURATION) {
+          // Warm in-memory cache
+          this.priceCache.set(key, parsed);
+          return parsed.price;
+        } else {
+          localStorage.removeItem(lsKey);
+        }
+      }
+    } catch {}
+
+    return null;
   }
 
   private setCache(asset: string, quote: string, price: number): void {
     const key = this.getCacheKey(asset, quote);
-    this.priceCache.set(key, { price, timestamp: Date.now() });
+    const entry = { price, timestamp: Date.now() };
+    this.priceCache.set(key, entry);
+    try {
+      const lsKey = `reflector_price:${this.network}:${key}`;
+      localStorage.setItem(lsKey, JSON.stringify(entry));
+    } catch {}
   }
 
   private async rateLimit(): Promise<void> {
@@ -125,7 +150,16 @@ class ReflectorPriceEngine {
       const quoteScVal = nativeToScVal(quote, { type: 'string' });
 
       const op = contract.call('lastprice', assetScVal, quoteScVal);
-      const sim: any = await this.server.simulateTransaction(op as any);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const tx = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(op)
+        .setTimeout(30)
+        .build();
+
+      const sim: any = await this.server.simulateTransaction(tx);
       
       if ('error' in sim) {
         throw new Error(`Oracle simulation error: ${sim.error}`);

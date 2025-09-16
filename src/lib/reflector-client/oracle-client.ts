@@ -1,6 +1,6 @@
-import { Contract, xdr, nativeToScVal, scValToNative } from '@stellar/stellar-sdk';
+import { Contract, xdr, nativeToScVal, scValToNative, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { REFLECTOR_ORACLE_CONTRACTS } from '../appConfig';
+import { REFLECTOR_ORACLE_CONTRACTS, getNetworkConfig } from '../appConfig';
 
 interface CachedRate {
   rate: number;
@@ -14,6 +14,7 @@ export class ReflectorOracleClient {
   private readonly CACHE_DURATION = 60_000; // 1 minute
   private readonly RATE_LIMIT_DURATION = 2_000; // 2 seconds
   private lastRequestTime = 0;
+  private networkPassphrase: string;
 
   constructor(network: 'mainnet' | 'testnet') {
     const rpcUrl = network === 'mainnet'
@@ -22,6 +23,7 @@ export class ReflectorOracleClient {
 
     this.server = new SorobanServer(rpcUrl);
     this.contracts = REFLECTOR_ORACLE_CONTRACTS[network];
+    this.networkPassphrase = getNetworkConfig(network).networkPassphrase;
   }
 
   private getCacheKey(base: string, quote: string) {
@@ -76,7 +78,16 @@ export class ReflectorOracleClient {
       nativeToScVal(quote, { type: 'string' })
     );
 
-    const sim: any = await this.server.simulateTransaction(op as any);
+    const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+    const tx = new TransactionBuilder(sourceAcct, {
+      fee: '100',
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addOperation(op)
+      .setTimeout(30)
+      .build();
+
+    const sim: any = await this.server.simulateTransaction(tx);
     if ('error' in sim) {
       throw new Error(`Oracle simulation error: ${sim.error}`);
     }
@@ -125,7 +136,17 @@ export class ReflectorOracleClient {
   async listSupportedCurrencies(): Promise<string[]> {
     const contract = new Contract(this.getContractAddress('forex'));
     const op = contract.call('supported_currencies');
-    const sim: any = await this.server.simulateTransaction(op as any);
+
+    const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+    const tx = new TransactionBuilder(sourceAcct, {
+      fee: '100',
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addOperation(op)
+      .setTimeout(30)
+      .build();
+
+    const sim: any = await this.server.simulateTransaction(tx);
     if ('error' in sim) {
       throw new Error(`Oracle listSupportedCurrencies error: ${sim.error}`);
     }

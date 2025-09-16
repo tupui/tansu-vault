@@ -102,45 +102,19 @@ export class TansuProjectContractService {
 
   /**
    * Search for projects based on a query string
+   * NOTE: Contract does not expose a full-text search. We attempt direct lookup via get_project.
    */
   async searchProjects(query: string): Promise<any[]> {
-    if (!query.trim()) {
-      return [];
-    }
+    const q = (query || '').trim();
+    if (!q) return [];
 
     try {
-      // Create a simple contract call for search_projects
-      const contract = new Contract(this.contractId);
-      const searchParam = nativeToScVal(query, { type: 'string' });
-      
-      // Build transaction for simulation
-      const operation = contract.call('search_projects', searchParam);
-      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-      const transaction = new TransactionBuilder(source, {
-        fee: '100',
-        networkPassphrase: this.networkPassphrase,
-      })
-        .addOperation(operation)
-        .setTimeout(30)
-        .build();
-
-      const sim: any = await this.rpcServer.simulateTransaction(transaction);
-
-      if ('error' in sim) {
-        console.warn('Contract simulation error:', sim.error);
-        return [];
-      }
-
-      // Parse results if successful
-      const result = sim.result?.retval;
-      if (result) {
-        const projects = scValToNative(result);
-        return Array.isArray(projects) ? projects : [];
-      }
-      
+      // Reuse getProject under the hood
+      const result = await this.getProject(q);
+      if (result) return [result];
       return [];
     } catch (error) {
-      console.warn('Failed to search projects:', error);
+      console.warn('Search fallback (get_project) failed:', error);
       return [];
     }
   }
