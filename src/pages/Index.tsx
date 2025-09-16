@@ -1,6 +1,5 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { VaultStats } from '@/components/VaultStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,9 +30,9 @@ const Index = () => {
   return <Layout>
       <Navigation />
       
-      <div className="pt-24">
+      <div className="pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden py-12 lg:py-20">
+        <section className="relative overflow-hidden py-8 lg:py-12">
           <div className="container mx-auto px-6">
             <motion.div initial={{
               opacity: 0,
@@ -70,26 +69,12 @@ const Index = () => {
                   View Treasury
                 </Button>
               </div>
-
-              {/* Stats */}
-              <motion.div initial={{
-                opacity: 0,
-                y: 20
-              }} animate={{
-                opacity: 1,
-                y: 0
-              }} transition={{
-                duration: 0.6,
-                delay: 0.2
-              }} className="pt-8">
-                <VaultStats />
-              </motion.div>
             </motion.div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="py-20">
+        <section className="py-12 lg:py-16">
           <div className="container mx-auto px-6">
             <motion.div initial={{
             opacity: 0,
@@ -101,7 +86,7 @@ const Index = () => {
             duration: 0.6
           }} viewport={{
             once: true
-          }} className="text-center mb-16">
+          }} className="text-center mb-8 lg:mb-12">
               <h2 className="text-3xl lg:text-4xl font-bold mb-4">
                 Why Choose Tansu Vault?
               </h2>
@@ -142,26 +127,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-20">
-          <div className="container mx-auto px-6">
-            <motion.div initial={{
-            opacity: 0,
-            y: 20
-          }} whileInView={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} viewport={{
-            once: true
-          }}>
-              <Card className="glass border-border/50 shadow-stellar">
-                
-              </Card>
-            </motion.div>
-          </div>
-        </section>
       </div>
     </Layout>;
 };

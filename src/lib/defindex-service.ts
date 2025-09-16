@@ -1,12 +1,12 @@
 import { 
   Contract, 
-  SorobanRpc, 
   TransactionBuilder, 
   Account, 
   nativeToScVal, 
   scValToNative,
   xdr
 } from '@stellar/stellar-sdk';
+import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
 import { getNetworkConfig } from './appConfig';
 
 /**
@@ -64,7 +64,7 @@ export interface WithdrawResult {
 
 export class DeFindexVaultService {
   private contract: Contract;
-  private rpcServer: SorobanRpc.Server;
+  private rpcServer: SorobanServer;
   private networkPassphrase: string;
   private vaultContractId: string;
 
@@ -72,7 +72,7 @@ export class DeFindexVaultService {
     const config = getNetworkConfig(network);
     this.vaultContractId = config.vaultContract || 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP';
     this.contract = new Contract(this.vaultContractId);
-    this.rpcServer = new SorobanRpc.Server(config.sorobanRpcUrl);
+    this.rpcServer = new SorobanServer(config.sorobanRpcUrl);
     this.networkPassphrase = config.networkPassphrase;
   }
 
@@ -118,7 +118,7 @@ export class DeFindexVaultService {
 
     const simulation = await this.rpcServer.simulateTransaction(transaction);
     
-    if (SorobanRpc.Api.isSimulationError(simulation)) {
+    if (Api.isSimulationError(simulation)) {
       throw new Error(`Simulation failed: ${simulation.error}`);
     }
 
@@ -559,7 +559,7 @@ export class DeFindexVaultService {
 
       // Simulate to ensure it works
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (SorobanRpc.Api.isSimulationError(simulation)) {
+      if (Api.isSimulationError(simulation)) {
         throw new Error(`Deposit simulation failed: ${simulation.error}`);
       }
 
@@ -605,7 +605,7 @@ export class DeFindexVaultService {
 
       // Simulate to ensure it works
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (SorobanRpc.Api.isSimulationError(simulation)) {
+      if (Api.isSimulationError(simulation)) {
         throw new Error(`Withdraw simulation failed: ${simulation.error}`);
       }
 
