@@ -24,24 +24,11 @@ export const getFxRate = async (targetCurrency: string): Promise<number> => {
   }
   
   try {
-    const { OracleClient, AssetType } = await import('./reflector-client');
-    const client = new (OracleClient as any)(FX_ORACLE.contract);
-    
-    // Fetch rate for target currency from oracle
-    const rawRate = await client.getLastPrice({
-      type: AssetType.Other,
-      code: targetCurrency
-    });
-    
-    if (rawRate > 0) {
-      const rate = rawRate / Math.pow(10, FX_ORACLE.decimals); // USD per 1 target unit
-      fxRatesCache[cacheKey] = { rate, timestamp: Date.now() };
-      return rate;
-    } else {
-      throw new Error(`No rate available for ${targetCurrency}`);
-    }
+    // Skip oracle for now since contract ID is invalid
+    // Go directly to public API fallback
+    throw new Error('Oracle disabled, using public API');
   } catch (error) {
-    console.warn(`Failed to fetch FX rate for ${targetCurrency}:`, error);
+    console.warn(`Skipping oracle, using public API for ${targetCurrency}:`, error);
     
     // Fallback to public API
     try {

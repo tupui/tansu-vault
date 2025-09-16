@@ -22,7 +22,7 @@ async function getClient() {
   }
 
   const config = getNetworkConfig('testnet');
-  const contractId = config.vaultContract || 'CB4CEQW6W2HNVN3RA5T327T66N4DGIC24FONEZFKGUZVZDINK4WC5MXI';
+  const contractId = config.vaultContract || 'CCFZE6TOEZSTO2OEY5235UKFBB45BULTEPQ2GSKFXOGMYSO523W5FBCC';
   
   // Use the proven working Tansu pattern - create contract client with options
   const client = new DeFindexClient({

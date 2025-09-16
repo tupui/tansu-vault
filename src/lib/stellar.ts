@@ -64,7 +64,7 @@ const initializeNetwork = (network: NetworkType) => {
 // Initialize with testnet by default
 initializeNetwork('TESTNET');
 
-export const TESTNET_VAULT_ADDRESS = 'CB4CEQW6W2HNVN3RA5T327T66N4DGIC24FONEZFKGUZVZDINK4WC5MXI';
+export const TESTNET_VAULT_ADDRESS = 'CCFZE6TOEZSTO2OEY5235UKFBB45BULTEPQ2GSKFXOGMYSO523W5FBCC';
 
 // Contract addresses based on network
 export const getContractAddresses = () => {

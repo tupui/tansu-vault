@@ -50,7 +50,9 @@ export const useVaultTVL = (): VaultTVLData => {
     let mounted = true;
     const loadPrice = async () => {
       try {
-        const rate = await getXlmFiatRate(quoteCurrency);
+        // Use EXACT same logic as treasury (useProjectVault)
+        const { getXlmRateWithFallback } = await import('@/lib/fx');
+        const rate = await getXlmRateWithFallback(quoteCurrency); // Always uses mainnet rates
         if (mounted) setXlmFiatRate(rate || 0);
       } catch {
         if (mounted) setXlmFiatRate(null);

@@ -7,9 +7,23 @@ import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { formatFiatAmount } from '@/lib/fiat-currencies';
 
 export const VaultStats = () => {
-  const { totalXlm, loading, error } = useVaultTVL();
+  const { totalXlm, totalFiatValue, xlmFiatRate, loading, error } = useVaultTVL();
+  const { getCurrentCurrency } = useFiatCurrency();
+  const { formatFiatAmount: formatWithHook } = useFiatConversion();
   const [annualYield, setAnnualYield] = useState<number | null>(null);
   const [yieldLoading, setYieldLoading] = useState(false);
+  
+  const currentCurrency = getCurrentCurrency();
+  
+  // Format fiat value like the treasury does
+  const formatFiatValue = (value: number | null) => {
+    if (value == null) return '—';
+    try {
+      return formatWithHook(value);
+    } catch {
+      return formatFiatAmount(value, currentCurrency);
+    }
+  };
   
   // Load annual yield from DeFindex contract
   useEffect(() => {
@@ -21,7 +35,7 @@ export const VaultStats = () => {
         const { getNetworkConfig } = await import('@/lib/appConfig');
         
         const config = getNetworkConfig('testnet');
-        const contractId = config.vaultContract || 'CB4CEQW6W2HNVN3RA5T327T66N4DGIC24FONEZFKGUZVZDINK4WC5MXI';
+        const contractId = config.vaultContract || 'CCFZE6TOEZSTO2OEY5235UKFBB45BULTEPQ2GSKFXOGMYSO523W5FBCC';
         
         const client = new DeFindexClient({
           contractId,
@@ -65,7 +79,8 @@ export const VaultStats = () => {
   const stats = [
     {
       title: 'Total Value Locked',
-      value: loading ? 'Loading...' : totalXlm ? `${totalXlm.toFixed(2)} XLM` : '0 XLM',
+      value: loading ? 'Loading...' : formatFiatValue(totalFiatValue),
+      subtitle: totalXlm ? `${totalXlm.toFixed(2)} XLM` : '0 XLM',
       change: '',
       changeType: 'neutral' as const,
       icon: DollarSign,
@@ -74,6 +89,7 @@ export const VaultStats = () => {
     {
       title: 'Annual Yield',
       value: yieldLoading ? 'Loading...' : annualYield !== null ? `${annualYield.toFixed(2)}%` : '—',
+      subtitle: undefined,
       change: '',
       changeType: annualYield && annualYield > 0 ? 'positive' as const : 'neutral' as const,
       icon: TrendingUp,
@@ -82,6 +98,7 @@ export const VaultStats = () => {
     {
       title: 'Active Projects',
       value: '—',
+      subtitle: undefined,
       change: '',
       changeType: 'neutral' as const,
       icon: Users,
@@ -90,6 +107,7 @@ export const VaultStats = () => {
     {
       title: 'Carbon Offset',
       value: '—',
+      subtitle: undefined,
       change: '',
       changeType: 'neutral' as const,
       icon: Leaf,
@@ -111,9 +129,12 @@ export const VaultStats = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+            {stat.subtitle && (
+              <p className="text-sm text-muted-foreground mt-1">{stat.subtitle}</p>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
               {stat.title === 'Total Value Locked' ? 
-                (error ? 'Failed to load vault data' : 'Total XLM managed by DeFindex vault') :
+                (error ? 'Failed to load vault data' : 'Total managed by DeFindex vault') :
               stat.title === 'Annual Yield' ?
                 (annualYield !== null ? 'Based on vault performance reports' : 'No performance data yet') :
                 'Data will appear once funds are deposited and metrics are available'
