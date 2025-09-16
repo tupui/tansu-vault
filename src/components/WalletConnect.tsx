@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -22,30 +19,27 @@ import {
   LogOut, 
   Loader2, 
   CheckCircle, 
-  Globe, 
-  Smartphone, 
-  Monitor, 
-  Usb,
   ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  Key,
+  Globe,
+  Zap,
   Shield,
-  Link,
-  Copy,
-  ExternalLink
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 import { isValidPublicKey, sanitizeError, isValidDomain } from '@/lib/validation';
 import { resolveSorobanDomain } from '@/lib/soroban-domains';
 import { useNetwork } from '@/contexts/NetworkContext';
-import { getSupportedWallets } from '@/lib/walletKit';
 
-// Wallet configurations with icons and descriptions
+// Wallet configurations matching Stellar-Stratum
 interface WalletConfig {
   id: string;
   name: string;
   description: string;
-  icon?: string;
+  icon: React.ReactNode;
   isHardware?: boolean;
-  isMobile?: boolean;
-  isDesktop?: boolean;
   detectAvailability?: () => boolean;
 }
 
@@ -53,43 +47,44 @@ const WALLET_CONFIGS: WalletConfig[] = [
   {
     id: 'freighter',
     name: 'Freighter',
-    description: 'Browser extension wallet',
-    isDesktop: true,
+    description: 'Available',
+    icon: <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>,
     detectAvailability: () => typeof window !== 'undefined' && !!(window as any).freighter
   },
   {
     id: 'xbull',
     name: 'xBull',
-    description: 'Mobile & browser wallet',
-    isMobile: true,
-    isDesktop: true,
+    description: 'Available',
+    icon: <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">X</div>,
     detectAvailability: () => typeof window !== 'undefined' && !!(window as any).xBullWalletConnect
   },
   {
     id: 'ledger',
     name: 'Ledger',
     description: 'Hardware wallet',
+    icon: <div className="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center"><Shield className="w-4 h-4 text-white" /></div>,
     isHardware: true,
-    detectAvailability: () => true // Always available, requires USB
-  },
-  {
-    id: 'lobstr',
-    name: 'Lobstr',
-    description: 'Mobile wallet',
-    isMobile: true,
     detectAvailability: () => true
   },
   {
-    id: 'rabet',
-    name: 'Rabet',
-    description: 'Browser extension',
-    isDesktop: true,
-    detectAvailability: () => typeof window !== 'undefined' && !!(window as any).rabet
+    id: 'lobstr',
+    name: 'LOBSTR',
+    description: 'Available',
+    icon: <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">L</div>,
+    detectAvailability: () => true
+  },
+  {
+    id: 'hot',
+    name: 'HOT Wallet',
+    description: 'Available',
+    icon: <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">H</div>,
+    detectAvailability: () => true
   },
   {
     id: 'albedo',
     name: 'Albedo',
-    description: 'Web-based wallet',
+    description: 'Available',
+    icon: <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center text-white font-bold text-sm">A</div>,
     detectAvailability: () => true
   }
 ];
@@ -102,10 +97,8 @@ export const WalletConnect: React.FC = () => {
   // Modal state
   const [isOpen, setIsOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<'mainnet' | 'testnet'>(network === 'mainnet' ? 'mainnet' : 'testnet');
-  
-  // Connection state
   const [connecting, setConnecting] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(false);
+  const [showMoreWallets, setShowMoreWallets] = useState(false);
   
   // Input states
   const [manualAddress, setManualAddress] = useState('');
@@ -115,32 +108,14 @@ export const WalletConnect: React.FC = () => {
   // Device detection
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Get available wallets with proper ordering
-  const getAvailableWallets = useCallback(() => {
-    return WALLET_CONFIGS.map(config => ({
-      ...config,
-      isAvailable: config.detectAvailability?.() ?? true
-    })).sort((a, b) => {
-      // Prioritize available wallets
-      if (a.isAvailable && !b.isAvailable) return -1;
-      if (!a.isAvailable && b.isAvailable) return 1;
-      
-      // Device-specific ordering
-      if (isMobile) {
-        if (a.isMobile && !b.isMobile) return -1;
-        if (!a.isMobile && b.isMobile) return 1;
-      } else {
-        if (a.isDesktop && !b.isDesktop) return -1;
-        if (!a.isDesktop && b.isDesktop) return 1;
-      }
-      
-      return 0;
-    });
-  }, [isMobile]);
+  // Get available wallets
+  const availableWallets = WALLET_CONFIGS.map(config => ({
+    ...config,
+    isAvailable: config.detectAvailability?.() ?? true
+  }));
 
-  const availableWallets = getAvailableWallets();
-  const primaryWallets = availableWallets.slice(0, isMobile ? 4 : 6);
-  const secondaryWallets = availableWallets.slice(isMobile ? 4 : 6);
+  const primaryWallets = availableWallets.slice(0, 3);
+  const secondaryWallets = availableWallets.slice(3);
 
   // Connection handlers
   const handleWalletConnect = async (walletId: string, walletName: string) => {
@@ -236,27 +211,6 @@ export const WalletConnect: React.FC = () => {
     });
   };
 
-  // Helper functions
-  const getWalletIcon = (wallet: WalletConfig & { isAvailable: boolean }) => {
-    if (wallet.isHardware) {
-      return <Shield className="w-5 h-5 text-primary" />;
-    }
-    if (wallet.icon) {
-      return <img src={wallet.icon} alt={wallet.name} className="w-5 h-5 rounded" />;
-    }
-    return (
-      <div className="w-5 h-5 bg-gradient-to-br from-primary to-primary/70 rounded-sm flex items-center justify-center text-[10px] text-primary-foreground font-bold">
-        {wallet.name.charAt(0)}
-      </div>
-    );
-  };
-
-  const getWalletStatus = (wallet: WalletConfig & { isAvailable: boolean }) => {
-    if (wallet.isHardware) return 'Hardware';
-    if (wallet.isAvailable) return 'Ready';
-    return 'Install';
-  };
-
   // Connected state
   if (isConnected && address) {
     return (
@@ -282,7 +236,7 @@ export const WalletConnect: React.FC = () => {
     );
   }
 
-  // Disconnected state with modal
+  // Disconnected state with Stratum-style modal
   return (
     <div className="flex items-center gap-2">
       <NetworkSelector />
@@ -300,35 +254,32 @@ export const WalletConnect: React.FC = () => {
           </Button>
         </DialogTrigger>
         
-        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Wallet className="h-4 w-4" />
+        <DialogContent className="sm:max-w-lg bg-gray-900 border-gray-800 text-white max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Wallet className="h-5 w-5" />
               Connect Wallet
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              Choose your connection method for Tansu Vault
-            </DialogDescription>
           </DialogHeader>
           
-          {/* Network Toggle */}
-          <div className="flex-shrink-0 mb-4">
-            <div className="bg-muted/50 rounded-lg p-1 flex">
+          {/* Network Toggle - Stratum Style */}
+          <div className="flex-shrink-0 mb-6">
+            <div className="bg-gray-800 rounded-full p-1 flex mx-auto w-fit">
               <button
-                className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-all ${
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
                   selectedNetwork === 'mainnet'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setSelectedNetwork('mainnet')}
               >
                 Mainnet
               </button>
               <button
-                className={`flex-1 text-xs font-medium py-2 px-3 rounded-md transition-all ${
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
                   selectedNetwork === 'testnet'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setSelectedNetwork('testnet')}
               >
@@ -337,193 +288,118 @@ export const WalletConnect: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <Tabs defaultValue="wallets" className="h-full">
-              <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
-                <TabsTrigger value="wallets" className="flex items-center gap-1 text-xs">
-                  <Wallet className="h-3 w-3" />
-                  Wallets
-                </TabsTrigger>
-                <TabsTrigger value="domain" className="flex items-center gap-1 text-xs">
-                  <Globe className="h-3 w-3" />
-                  Domain
-                </TabsTrigger>
-                <TabsTrigger value="manual" className="flex items-center gap-1 text-xs">
-                  <Link className="h-3 w-3" />
-                  Manual
-                </TabsTrigger>
-              </TabsList>
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {/* Manual Address Entry */}
+            <button
+              className="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors group"
+              onClick={() => {
+                const address = prompt("Enter Stellar public key:");
+                if (address) {
+                  setManualAddress(address);
+                  handleManualConnect();
+                }
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
+                  <Key className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">Enter address manually</div>
+                  <div className="text-sm text-gray-400">View any account by public key</div>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </button>
 
-              <TabsContent value="wallets" className="space-y-2 mt-3">
-                {/* Primary Wallets */}
-                <div className="grid grid-cols-1 gap-2">
-                  {primaryWallets.map((wallet) => (
-                    <Button
+            {/* Soroban Domains */}
+            <button
+              className="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors group"
+              onClick={() => {
+                const domain = prompt("Enter Soroban domain:");
+                if (domain) {
+                  setDomainInput(domain);
+                  handleDomainConnect();
+                }
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Globe className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">Soroban Domains</div>
+                  <div className="text-sm text-gray-400">Resolve domain to address</div>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </button>
+
+            {/* Primary Wallets */}
+            {primaryWallets.map((wallet) => (
+              <button
+                key={wallet.id}
+                className="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleWalletConnect(wallet.id, wallet.name)}
+                disabled={!wallet.isAvailable || connecting === wallet.id}
+              >
+                <div className="flex items-center gap-3">
+                  {wallet.icon}
+                  <div className="text-left">
+                    <div className="font-medium">{wallet.name}</div>
+                    <div className="text-sm text-gray-400">{wallet.description}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {connecting === wallet.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                  )}
+                </div>
+              </button>
+            ))}
+
+            {/* Secondary Wallets */}
+            {secondaryWallets.length > 0 && (
+              <Collapsible open={showMoreWallets} onOpenChange={setShowMoreWallets}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-center gap-2 py-3 text-yellow-500 hover:text-yellow-400 transition-colors font-medium">
+                    See more wallets ({secondaryWallets.length})
+                    {showMoreWallets ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3">
+                  {secondaryWallets.map((wallet) => (
+                    <button
                       key={wallet.id}
-                      variant="outline"
-                      className="h-auto p-3 justify-start"
+                      className="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleWalletConnect(wallet.id, wallet.name)}
                       disabled={!wallet.isAvailable || connecting === wallet.id}
                     >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-3">
-                          {getWalletIcon(wallet)}
-                          <div className="text-left">
-                            <div className="text-sm font-medium">{wallet.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {wallet.description}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={wallet.isAvailable ? "default" : "secondary"} 
-                            className="text-[10px] px-1.5 py-0.5"
-                          >
-                            {getWalletStatus(wallet)}
-                          </Badge>
-                          {connecting === wallet.id && (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          )}
+                      <div className="flex items-center gap-3">
+                        {wallet.icon}
+                        <div className="text-left">
+                          <div className="font-medium">{wallet.name}</div>
+                          <div className="text-sm text-gray-400">{wallet.description}</div>
                         </div>
                       </div>
-                    </Button>
+                      <div className="flex items-center gap-2">
+                        {connecting === wallet.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                        )}
+                      </div>
+                    </button>
                   ))}
-                </div>
-
-                {/* Secondary Wallets */}
-                {secondaryWallets.length > 0 && (
-                  <Collapsible open={showMore} onOpenChange={setShowMore}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full text-xs h-8">
-                        <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${showMore ? 'rotate-180' : ''}`} />
-                        {showMore ? 'Show Less' : `${secondaryWallets.length} More Wallets`}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 mt-2">
-                      {secondaryWallets.map((wallet) => (
-                        <Button
-                          key={wallet.id}
-                          variant="outline"
-                          className="h-auto p-3 justify-start"
-                          onClick={() => handleWalletConnect(wallet.id, wallet.name)}
-                          disabled={!wallet.isAvailable || connecting === wallet.id}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-3">
-                              {getWalletIcon(wallet)}
-                              <div className="text-left">
-                                <div className="text-sm font-medium">{wallet.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {wallet.description}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={wallet.isAvailable ? "default" : "secondary"} 
-                                className="text-[10px] px-1.5 py-0.5"
-                              >
-                                {getWalletStatus(wallet)}
-                              </Badge>
-                              {connecting === wallet.id && (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              )}
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-
-                {/* Device indicator */}
-                <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground pt-2 border-t mt-3">
-                  {isMobile ? <Smartphone className="h-3 w-3" /> : <Monitor className="h-3 w-3" />}
-                  Optimized for {isMobile ? 'mobile' : 'desktop'}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="domain" className="space-y-3 mt-3">
-                <div>
-                  <Label htmlFor="domain" className="text-xs font-medium">
-                    Soroban Domain
-                  </Label>
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    Enter a .xlm domain or registered Soroban domain
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      id="domain"
-                      placeholder="project.xlm"
-                      value={domainInput}
-                      onChange={(e) => setDomainInput(e.target.value)}
-                      className="text-sm h-9"
-                      onKeyDown={(e) => e.key === 'Enter' && handleDomainConnect()}
-                    />
-                    <Button
-                      onClick={handleDomainConnect}
-                      disabled={!domainInput.trim() || resolvingDomain}
-                      size="sm"
-                      className="px-3 h-9"
-                    >
-                      {resolvingDomain ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        'Connect'
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xs font-medium mb-1">How it works:</div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
-                    <p>• Enter a registered Soroban domain</p>
-                    <p>• We resolve it to a Stellar address</p>
-                    <p>• Connect using your preferred wallet</p>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="manual" className="space-y-3 mt-3">
-                <div>
-                  <Label htmlFor="address" className="text-xs font-medium">
-                    Stellar Address
-                  </Label>
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    Enter a valid Stellar public key (G...)
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      id="address"
-                      placeholder="GXXXXXXXXX..."
-                      value={manualAddress}
-                      onChange={(e) => setManualAddress(e.target.value)}
-                      className="text-sm h-9 font-mono"
-                      onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
-                    />
-                    <Button
-                      onClick={handleManualConnect}
-                      disabled={!manualAddress.trim()}
-                      size="sm"
-                      className="px-3 h-9"
-                    >
-                      Connect
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xs font-medium mb-1">Manual Connection:</div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
-                    <p>• Enter any valid Stellar public key</p>
-                    <p>• Read-only access to account data</p>
-                    <p>• Cannot sign transactions</p>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         </DialogContent>
       </Dialog>
