@@ -198,32 +198,16 @@ export class TansuProjectContractService {
    */
   async isMaintainer(projectId: string, address: string): Promise<boolean> {
     try {
-      const { computeTansuProjectKey } = await import('./hash');
-      const key = computeTansuProjectKey(projectId);
-
-      const contract = new Contract(this.contractId);
-      const projectParam = nativeToScVal(Buffer.from(key), { type: 'bytes' });
-      const addressParam = nativeToScVal(Address.fromString(address));
+      // Get the project object using get_project
+      const project = await this.getProject(projectId);
       
-      const operation = contract.call('is_maintainer', projectParam, addressParam);
-      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-      const transaction = new TransactionBuilder(source, {
-        fee: '100',
-        networkPassphrase: this.networkPassphrase,
-      })
-        .addOperation(operation)
-        .setTimeout(30)
-        .build();
-      
-      const sim: any = await this.rpcServer.simulateTransaction(transaction);
-      
-      if ('error' in sim) {
-        console.warn('Failed to check maintainer status:', sim.error);
+      if (!project || !project.maintainers) {
         return false;
       }
 
-      const result = sim.result?.retval;
-      return result ? Boolean(scValToNative(result)) : false;
+      // Check if the address is in the maintainers vector
+      const maintainers = Array.isArray(project.maintainers) ? project.maintainers : [];
+      return maintainers.includes(address);
     } catch (error) {
       console.error('Failed to check maintainer status:', error);
       return false;
