@@ -184,14 +184,14 @@ const Vault: React.FC = () => {
                   <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                     {!isMaintainer ? 'Access Required' : 'Domain Connection Required'}
                   </h3>
-                  <p className="text-muted-foreground">
-                    {!isMaintainer 
-                      ? 'You need to be a maintainer of this project to manage its vault.'
-                      : address !== projectWalletAddress
-                        ? `Connect your wallet via the project's Soroban domain (${selectedProject.domain}) or use the project wallet address directly.`
-                        : 'Domain connection is required to manage the vault.'
-                    }
-                  </p>
+                   <p className="text-muted-foreground">
+                     {!isMaintainer 
+                       ? 'You need to be a maintainer of this project to manage its vault.'
+                       : address !== projectWalletAddress
+                         ? `Connect your wallet via the project's Soroban domain${selectedProject.domain ? ` (${selectedProject.domain})` : ''} or use the project wallet address directly.`
+                         : 'Domain connection is required to manage the vault.'
+                     }
+                   </p>
                 </CardContent>
               </Card>
             )}
