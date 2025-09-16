@@ -12,8 +12,8 @@ export const Layout = ({ children, className }: LayoutProps) => {
       {/* Stellar particles background */}
       <div className="stellar-particles" />
       
-      {/* Main content */}
-      <main className="relative z-10">
+      {/* Main content with top padding to account for fixed navbar */}
+      <main className="relative z-10 pt-16">
         {children}
       </main>
     </div>

@@ -194,19 +194,52 @@ export class TansuProjectContractService {
   }
 
   /**
+   * Get maintainers for a specific project using get_maintainers function
+   */
+  async getMaintainers(projectId: string): Promise<string[]> {
+    try {
+      const { computeTansuProjectKey } = await import('./hash');
+      const projectKey = computeTansuProjectKey(projectId);
+      
+      const contract = new Contract(this.contractId);
+      const keyParam = nativeToScVal(Buffer.from(projectKey), { type: 'bytes' });
+      
+      const operation = contract.call('get_maintainers', keyParam);
+      const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const transaction = new TransactionBuilder(source, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+      
+      const sim: any = await this.rpcServer.simulateTransaction(transaction);
+      
+      if ('error' in sim) {
+        console.warn('Failed to get maintainers:', sim.error);
+        return [];
+      }
+
+      const result = sim.result?.retval;
+      if (result) {
+        const maintainers = scValToNative(result);
+        return Array.isArray(maintainers) ? maintainers : [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Failed to get maintainers:', error);
+      return [];
+    }
+  }
+
+  /**
    * Check if an address is a maintainer for a specific project
    */
   async isMaintainer(projectId: string, address: string): Promise<boolean> {
     try {
-      // Get the project object using get_project
-      const project = await this.getProject(projectId);
-      
-      if (!project || !project.maintainers) {
-        return false;
-      }
-
-      // Check if the address is in the maintainers vector
-      const maintainers = Array.isArray(project.maintainers) ? project.maintainers : [];
+      const maintainers = await this.getMaintainers(projectId);
       return maintainers.includes(address);
     } catch (error) {
       console.error('Failed to check maintainer status:', error);

@@ -39,14 +39,38 @@ const Vault: React.FC = () => {
         <div className="flex flex-col space-y-2">
           <h1 className="text-4xl font-bold text-foreground">Project Vault Management</h1>
           <p className="text-muted-foreground text-lg">
-            Search for Tansu projects and manage their treasury vaults
+            {selectedProject ? 
+              `Manage the treasury vault for ${selectedProject.name}` :
+              'Search for Tansu projects and manage their treasury vaults'
+            }
           </p>
         </div>
 
-        <ProjectSearch 
-          onProjectSelect={handleProjectSelect}
-          selectedProject={selectedProject}
-        />
+        {selectedProject ? (
+          <Card className="border-success/50 bg-success/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-success rounded-full"></div>
+                    <span className="font-medium text-success">Connected to Project</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground">{selectedProject.name}</h3>
+                  <p className="text-muted-foreground">{selectedProject.description}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Domain</p>
+                  <p className="font-mono text-sm">{selectedProject.domain}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <ProjectSearch 
+            onProjectSelect={handleProjectSelect}
+            selectedProject={selectedProject}
+          />
+        )}
 
         {selectedProject ? (
           <div className="space-y-6">
