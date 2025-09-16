@@ -31,6 +31,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [slippageTolerance, setSlippageTolerance] = useState('5'); // 5% default slippage
   
   const { address, isConnected, isDomainConnected, connectedDomain } = useWallet();
   const { toast } = useToast();
@@ -49,14 +50,27 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
     }
     
     const formattedAmount = formatStellarAmount(depositAmount);
+    const availableBalance = parseFloat(userBalance);
+    const depositValue = parseFloat(formattedAmount);
+    
+    // Check if user has sufficient balance (including reserve requirements)
+    const minimumReserve = 1; // Keep 1 XLM for account reserve
+    if (depositValue > (availableBalance - minimumReserve)) {
+      toast({
+        title: "Insufficient Balance",
+        description: `Cannot deposit ${formattedAmount} XLM. Available: ${(availableBalance - minimumReserve).toFixed(7)} XLM (${minimumReserve} XLM reserved for account minimum)`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
     try {
-      await depositToVault(address, formattedAmount);
+      const hash = await depositToVault(address, formattedAmount);
       
       toast({
         title: "Deposit Successful",
-        description: `Successfully deposited ${formatAssetAmount(formattedAmount)} XLM to vault`,
+        description: `Successfully deposited ${formatAssetAmount(formattedAmount)} XLM to DeFindex vault. Transaction: ${hash.slice(0, 8)}...`,
       });
       
       setDepositAmount('');
@@ -87,11 +101,12 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
     
     const formattedAmount = formatStellarAmount(withdrawAmount);
     const availableBalance = parseFloat(vaultBalance);
+    const withdrawValue = parseFloat(formattedAmount);
     
-    if (parseFloat(formattedAmount) > availableBalance) {
+    if (withdrawValue > availableBalance) {
       toast({
-        title: "Insufficient Balance",
-        description: `Cannot withdraw ${formattedAmount} XLM. Available: ${availableBalance.toFixed(7)} XLM`,
+        title: "Insufficient Vault Balance",
+        description: `Cannot withdraw ${formattedAmount} XLM. Available in vault: ${availableBalance.toFixed(7)} XLM`,
         variant: "destructive",
       });
       return;
@@ -99,11 +114,12 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
     
     setIsLoading(true);
     try {
-      await withdrawFromVault(address, formattedAmount);
+      const slippage = parseFloat(slippageTolerance) || 5;
+      const hash = await withdrawFromVault(address, formattedAmount, slippage);
       
       toast({
         title: "Withdrawal Successful",
-        description: `Successfully withdrew ${formatAssetAmount(formattedAmount)} XLM from vault`,
+        description: `Successfully withdrew ${formatAssetAmount(formattedAmount)} XLM from DeFindex vault. Transaction: ${hash.slice(0, 8)}...`,
       });
       
       setWithdrawAmount('');
@@ -277,6 +293,24 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Available: {formatAssetAmount(vaultBalance)} XLM
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="slippage-tolerance">Slippage Tolerance (%)</Label>
+                  <Input
+                    id="slippage-tolerance"
+                    type="number"
+                    placeholder="5"
+                    value={slippageTolerance}
+                    onChange={(e) => setSlippageTolerance(e.target.value)}
+                    className="mt-1"
+                    min="0.1"
+                    max="50"
+                    step="0.1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Maximum acceptable price impact during withdrawal
                   </p>
                 </div>
                 

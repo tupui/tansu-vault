@@ -259,7 +259,13 @@ const buildContractTransaction = async (
 
 export const depositToVault = async (userAddress: string, amount: string): Promise<string> => {
   try {
-    const contracts = getContractAddresses();
+    const { getNetworkConfig } = await import('./appConfig');
+    const config = getNetworkConfig('testnet');
+    const vaultContractId = config.vaultContract;
+    
+    if (!vaultContractId) {
+      throw new Error('Vault contract address not configured');
+    }
 
     // Convert amount to i128 with 7 decimals (XLM standard)
     const amountToI128 = (amt: string, decimals = 7): string => {
@@ -270,15 +276,16 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
 
     const amountI128 = amountToI128(amount);
     
-    // DeFindex vault expects vectors for amounts
+    // DeFindex deposit function signature:
+    // fn deposit(e: Env, amounts_desired: Vec<i128>, amounts_min: Vec<i128>, from: Address, invest: bool)
     const amountsDesired = [nativeToScVal(amountI128, { type: 'i128' })];
-    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for now
+    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for slippage protection
     const fromAddress = nativeToScVal(userAddress, { type: 'address' });
     const invest = nativeToScVal(true, { type: 'bool' }); // Auto-invest into strategies
 
     const transaction = await buildContractTransaction(
       userAddress,
-      contracts.XLM_HODL_VAULT,
+      vaultContractId,
       'deposit',
       [
         nativeToScVal(amountsDesired, { type: 'vec' }),
@@ -316,14 +323,19 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
     }
     throw new Error('Transaction timed out');
   } catch (error) {
-    console.error('Deposit failed:', error);
     throw new Error(`Deposit failed: ${error}`);
   }
 };
 
-export const withdrawFromVault = async (userAddress: string, amount: string): Promise<string> => {
+export const withdrawFromVault = async (userAddress: string, amount: string, slippagePercent: number = 5): Promise<string> => {
   try {
-    const contracts = getContractAddresses();
+    const { getNetworkConfig } = await import('./appConfig');
+    const config = getNetworkConfig('testnet');
+    const vaultContractId = config.vaultContract;
+    
+    if (!vaultContractId) {
+      throw new Error('Vault contract address not configured');
+    }
 
     // Convert amount to i128 with 7 decimals (XLM standard)
     const amountToI128 = (amt: string, decimals = 7): string => {
@@ -334,19 +346,20 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
 
     const amountI128 = amountToI128(amount);
     
-    // DeFindex vault expects vectors for amounts
-    const amountsDesired = [nativeToScVal(amountI128, { type: 'i128' })];
-    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for now
-    const fromAddress = nativeToScVal(userAddress, { type: 'address' });
+    // DeFindex withdraw function signature:
+    // fn withdraw(e: Env, amounts: Vec<i128>, to: Address, max_slippage: i128)
+    const amounts = [nativeToScVal(amountI128, { type: 'i128' })];
+    const toAddress = nativeToScVal(userAddress, { type: 'address' });
+    const maxSlippage = nativeToScVal((slippagePercent * 100).toString(), { type: 'i128' }); // Convert % to basis points (bps)
 
     const transaction = await buildContractTransaction(
       userAddress,
-      contracts.XLM_HODL_VAULT,
+      vaultContractId,
       'withdraw',
       [
-        nativeToScVal(amountsDesired, { type: 'vec' }),
-        nativeToScVal(amountsMin, { type: 'vec' }),
-        fromAddress
+        nativeToScVal(amounts, { type: 'vec' }),
+        toAddress,
+        maxSlippage
       ]
     );
 
@@ -378,20 +391,25 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
     }
     throw new Error('Transaction timed out');
   } catch (error) {
-    console.error('Withdrawal failed:', error);
     throw new Error(`Withdrawal failed: ${error}`);
   }
 };
 
 export const getVaultTotalBalance = async (): Promise<string> => {
   try {
-    const { getContractAddresses } = await import('./appConfig');
-    const contracts = getContractAddresses('testnet');
-    const contract = new Contract(contracts.VAULT);
+    const { getNetworkConfig } = await import('./appConfig');
+    const config = getNetworkConfig('testnet');
+    const vaultContractId = config.vaultContract;
+    
+    if (!vaultContractId) {
+      return "0";
+    }
+    
+    const contract = new Contract(vaultContractId);
     
     // Need to create proper transaction, not just operation
     const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const op = contract.call('total_supply');
+    const op = contract.call('total_managed_funds'); // DeFindex vault function for total assets under management
     
     const transaction = new TransactionBuilder(sourceAccount, {
       fee: '100',
@@ -404,7 +422,6 @@ export const getVaultTotalBalance = async (): Promise<string> => {
     const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      console.warn(`Vault total balance query error: ${sim.error}`);
       return "0";
     }
 
@@ -415,16 +432,21 @@ export const getVaultTotalBalance = async (): Promise<string> => {
     const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
     return balance.toString();
   } catch (error) {
-    console.error('Failed to get vault total balance:', error);
     return "0";
   }
 };
 
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
   try {
-    const { getContractAddresses } = await import('./appConfig');
-    const contracts = getContractAddresses('testnet');
-    const contract = new Contract(contracts.VAULT);
+    const { getNetworkConfig } = await import('./appConfig');
+    const config = getNetworkConfig('testnet');
+    const vaultContractId = config.vaultContract;
+    
+    if (!vaultContractId) {
+      return "0";
+    }
+    
+    const contract = new Contract(vaultContractId);
     
     // Need to create proper transaction, not just operation
     const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
@@ -441,7 +463,6 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
     const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      console.warn(`Vault user balance query error: ${sim.error}`);
       return "0";
     }
 
@@ -452,7 +473,6 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
     const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
     return balance.toString();
   } catch (error) {
-    console.error('Failed to get vault user balance:', error);
     return "0";
   }
 };

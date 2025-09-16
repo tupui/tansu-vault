@@ -39,6 +39,20 @@ export const getNetworkConfig = (network: string): NetworkConfig => {
 
 export const getContractAddresses = (network: string = DEFAULT_NETWORK) => {
   const config = getNetworkConfig(network);
+  
+  // Load DeFindex contract addresses from testnet.contracts.json for testnet
+  if (network === 'testnet') {
+    return {
+      TANSU_PROJECT: config.tansuProjectContract || '',
+      SOROBAN_DOMAIN: config.sorobanDomainContract || '',
+      VAULT: config.vaultContract || 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP',
+      DEFINDEX_FACTORY: 'CD6MEVYGXCCUTOUIC3GNMIDOSRY4A2WGCRQGOOCVG5PK2N7UNGGU6BBQ',
+      XLM_HODL_VAULT: 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP',
+      XLM_HODL_STRATEGY_0: 'CCEE2VAGPXKVIZXTVIT4O5B7GCUDTZTJ5RIXBPJSZ7JWJCJ2TLK75WVW',
+      XLM_HODL_STRATEGY_1: 'CAHWRPKBPX4FNLXZOAD565IBSICQPL5QX37IDLGJYOPWX22WWKFWQUBA'
+    };
+  }
+  
   return {
     TANSU_PROJECT: config.tansuProjectContract || '',
     SOROBAN_DOMAIN: config.sorobanDomainContract || '',
