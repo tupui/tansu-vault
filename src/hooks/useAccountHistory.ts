@@ -280,11 +280,12 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
           // Use historical XLM price for the transaction date
           usdPrice = await getXlmUsdRateForDate(txDate);
         } else {
-          // Use current price for other assets (best-effort)
+          // Use current price for other assets (get USD price then convert)
           const key = `${tx.assetCode}:${tx.assetIssuer}`;
           if (!otherPriceCache.has(key)) {
             try {
-              const p = await getAssetPrice(tx.assetCode!, quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+              // Always get USD price first for consistency
+              const p = await getAssetPrice(tx.assetCode!, 'USD', network === 'mainnet' ? 'mainnet' : 'testnet');
               otherPriceCache.set(key, p || 0);
             } catch {
               otherPriceCache.set(key, 0);
@@ -299,7 +300,7 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
         }
         
         const usdAmount = usdPrice * tx.amount;
-        const fiatAmount = tx.assetType === 'native' ? usdAmount * fxFactor : usdAmount;
+        const fiatAmount = usdAmount * fxFactor; // Apply FX conversion for all assets
         newFiatAmounts.set(tx.id, fiatAmount);
       }
       

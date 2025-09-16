@@ -27,7 +27,7 @@ export const useAssetPrices = (
   assets: string[],
   options: UseAssetPricesOptions = {}
 ): UseAssetPricesResult => {
-  const { refreshInterval = 5 * 60 * 1000, enabled = true } = options; // 5 minutes default
+  const { refreshInterval = 10 * 60 * 1000, enabled = true } = options; // Increased default to 10 minutes
   const { network } = useNetwork();
   const { quoteCurrency } = useFiatCurrency();
   
@@ -42,8 +42,11 @@ export const useAssetPrices = (
     setError(null);
 
     try {
+      // Deduplicate assets to reduce API calls
+      const uniqueAssets = [...new Set(assets.filter(Boolean))];
+      
       const priceData = await getAssetPrices(
-        assets, 
+        uniqueAssets, 
         quoteCurrency, 
         network === 'mainnet' ? 'mainnet' : 'testnet'
       );
@@ -56,7 +59,7 @@ export const useAssetPrices = (
     } finally {
       setLoading(false);
     }
-  }, [assets, quoteCurrency, network, enabled]);
+  }, [assets.join(','), quoteCurrency, network, enabled]); // Use join for stable dependency
 
   const refresh = useCallback(async () => {
     // Clear cache and refetch
@@ -81,11 +84,11 @@ export const useAssetPrices = (
     fetchPrices();
   }, [fetchPrices]);
 
-  // Set up refresh interval
+  // Reduce refresh interval from 5 minutes to 10 minutes to minimize network calls
   useEffect(() => {
     if (!enabled || refreshInterval <= 0) return;
 
-    const interval = setInterval(fetchPrices, refreshInterval);
+    const interval = setInterval(fetchPrices, Math.max(refreshInterval, 10 * 60 * 1000)); // Min 10 minutes
     return () => clearInterval(interval);
   }, [fetchPrices, refreshInterval, enabled]);
 

@@ -1,8 +1,9 @@
 import { Contract, xdr, nativeToScVal, TransactionBuilder, Account } from '@stellar/stellar-sdk';
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { REFLECTOR_ORACLE_CONTRACTS, getNetworkConfig } from './appConfig';
+import { REFLECTOR_ORACLE_CONTRACTS, getNetworkConfig, CACHE_CONFIG } from './appConfig';
 import { parseAsset, AssetInfo, AssetType } from './reflector-client/asset-type';
 import { buildAssetScVal, parseSorobanResult, scalePrice } from './reflector-client/xdr-helper';
+import { priceCache, fxRateCache } from './enhanced-cache';
 
 interface OracleConfig {
   contract: string;
@@ -40,20 +41,16 @@ const REFLECTOR_ORACLES: Record<string, OracleConfig> = {
 
 class ReflectorPriceEngine {
   private server: SorobanServer;
-  private priceCache = new Map<string, CachedPrice>();
-  private assetListCache = new Map<string, CachedAssetList>();
-  private requestQueue = new Map<string, Promise<number>>();
   private network: 'mainnet' | 'testnet';
   private networkPassphrase: string;
   
   // Rate limiting
-  private readonly WINDOW_MS = 10_000; // 10 seconds
-  private readonly BURST_LIMIT = 50; // 50 calls per window
+  private readonly WINDOW_MS = CACHE_CONFIG.RATE_LIMIT_WINDOW;
+  private readonly BURST_LIMIT = CACHE_CONFIG.RATE_LIMIT_BURST;
   private requestTimes: number[] = [];
   
-  // Cache durations
-  private readonly PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  private readonly ASSETS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+  // Request deduplication
+  private pendingRequests = new Map<string, Promise<number>>();
 
   constructor(network: 'mainnet' | 'testnet') {
     this.network = network;
@@ -73,47 +70,15 @@ class ReflectorPriceEngine {
     this.networkPassphrase = getNetworkConfig(network).networkPassphrase;
   }
 
-  private getCacheKey(asset: string, quote: string): string {
-    return `${asset}_${quote}`;
-  }
 
   private getFromCache(asset: string, quote: string): number | null {
-    const key = this.getCacheKey(asset, quote);
-    const cached = this.priceCache.get(key);
-    if (cached) {
-      if (Date.now() - cached.timestamp <= this.PRICE_CACHE_DURATION) {
-        return cached.price;
-      }
-      this.priceCache.delete(key);
-    }
-
-    // Fallback to localStorage
-    try {
-      const lsKey = `reflector_price:${this.network}:${key}`;
-      const raw = localStorage.getItem(lsKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { price: number; timestamp: number };
-        if (Date.now() - parsed.timestamp <= this.PRICE_CACHE_DURATION) {
-          // Warm in-memory cache
-          this.priceCache.set(key, parsed);
-          return parsed.price;
-        } else {
-          localStorage.removeItem(lsKey);
-        }
-      }
-    } catch {}
-
-    return null;
+    const key = `${this.network}:${asset}_${quote}`;
+    return priceCache.get(key);
   }
 
   private setCache(asset: string, quote: string, price: number): void {
-    const key = this.getCacheKey(asset, quote);
-    const entry = { price, timestamp: Date.now() };
-    this.priceCache.set(key, entry);
-    try {
-      const lsKey = `reflector_price:${this.network}:${key}`;
-      localStorage.setItem(lsKey, JSON.stringify(entry));
-    } catch {}
+    const key = `${this.network}:${asset}_${quote}`;
+    priceCache.set(key, price);
   }
 
   private async rateLimit(): Promise<void> {
@@ -185,20 +150,20 @@ class ReflectorPriceEngine {
     if (cached !== null) return cached;
 
     // Deduplicate requests
-    const requestKey = `${assetCode}_${quote}`;
-    if (this.requestQueue.has(requestKey)) {
-      return this.requestQueue.get(requestKey)!;
+    const requestKey = `${this.network}:${assetCode}_${quote}`;
+    if (this.pendingRequests.has(requestKey)) {
+      return this.pendingRequests.get(requestKey)!;
     }
 
     const pricePromise = this.fetchAssetPriceInternal(assetCode, quote);
-    this.requestQueue.set(requestKey, pricePromise);
+    this.pendingRequests.set(requestKey, pricePromise);
     
     try {
       const price = await pricePromise;
       this.setCache(assetCode, quote, price);
       return price;
     } finally {
-      this.requestQueue.delete(requestKey);
+      this.pendingRequests.delete(requestKey);
     }
   }
 
@@ -248,13 +213,15 @@ class ReflectorPriceEngine {
   private async getFxRate(currency: string): Promise<number> {
     if (currency === 'USD') return 1;
     
-    const cached = this.getFromCache('USD', currency);
+    // Use dedicated FX cache
+    const key = `${this.network}:USD_${currency}`;
+    const cached = fxRateCache.get(key);
     if (cached !== null) return cached;
 
     try {
       const usdAsset = parseAsset('USD');
       const rate = await this.fetchPriceFromOracle('FX', usdAsset, currency);
-      this.setCache('USD', currency, rate);
+      fxRateCache.set(key, rate);
       return rate;
     } catch (error) {
       throw new Error(`Failed to get FX rate for ${currency}: ${error}`);
@@ -284,8 +251,9 @@ class ReflectorPriceEngine {
   }
 
   public clearCache(): void {
-    this.priceCache.clear();
-    this.assetListCache.clear();
+    priceCache.clear();
+    fxRateCache.clear();
+    this.pendingRequests.clear();
   }
 }
 

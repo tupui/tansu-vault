@@ -132,28 +132,43 @@ export class ReflectorOracleClient {
     return result;
   }
 
-  // Discovery of available fiat currencies from FOREX oracle
+  // Discovery of available fiat currencies from FOREX oracle (with fallback)
   async listSupportedCurrencies(): Promise<string[]> {
-    const contract = new Contract(this.getContractAddress('forex'));
-    const op = contract.call('supported_currencies');
+    try {
+      const contract = new Contract(this.getContractAddress('forex'));
+      const op = contract.call('supported_currencies');
 
-    const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const tx = new TransactionBuilder(sourceAcct, {
-      fee: '100',
-      networkPassphrase: this.networkPassphrase,
-    })
-      .addOperation(op)
-      .setTimeout(30)
-      .build();
+      const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
+      const tx = new TransactionBuilder(sourceAcct, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(op)
+        .setTimeout(30)
+        .build();
 
-    const sim: any = await this.server.simulateTransaction(tx);
-    if ('error' in sim) {
-      throw new Error(`Oracle listSupportedCurrencies error: ${sim.error}`);
+      const sim: any = await this.server.simulateTransaction(tx);
+      if ('error' in sim) {
+        console.warn(`Oracle listSupportedCurrencies error: ${sim.error}`);
+        return this.getFallbackCurrencies();
+      }
+      
+      const retval = sim.result?.retval as xdr.ScVal | undefined;
+      if (!retval) return this.getFallbackCurrencies();
+      
+      const native = scValToNative(retval);
+      const currencies = Array.isArray(native) ? native.map((c) => String(c)) : [];
+      
+      // Return fallback if oracle returns empty list
+      return currencies.length > 0 ? currencies : this.getFallbackCurrencies();
+    } catch (error) {
+      console.warn('Failed to fetch supported currencies from oracle:', error);
+      return this.getFallbackCurrencies();
     }
-    const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) return [];
-    const native = scValToNative(retval);
-    return Array.isArray(native) ? native.map((c) => String(c)) : [];
+  }
+
+  private getFallbackCurrencies(): string[] {
+    return ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
   }
 }
 

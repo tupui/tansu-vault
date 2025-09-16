@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getProjectVaultStats, isProjectMaintainer, type TansuProject } from '@/lib/tansu-contracts';
 import { getAccountBalances } from '@/lib/stellar';
-import { getXlmFiatRate } from '@/lib/fiat-currencies';
+import { getAssetPrice } from '@/lib/reflector';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { useNetwork } from '@/contexts/NetworkContext';
 
@@ -86,13 +86,13 @@ export const useProjectVault = (
     };
   }, [selectedProject, projectWalletAddress, network]);
 
-  // Load XLM fiat rate
+  // Load XLM fiat rate (reduced frequency to minimize API calls)
   useEffect(() => {
     let mounted = true;
     
     const loadFiatRate = async () => {
       try {
-        const rate = await getXlmFiatRate(quoteCurrency);
+        const rate = await getAssetPrice('XLM', quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
         if (mounted) {
           setXlmFiatRate(rate || 0);
         }
@@ -105,14 +105,14 @@ export const useProjectVault = (
 
     loadFiatRate();
     
-    // Refresh rate every minute
-    const interval = setInterval(loadFiatRate, 60_000);
+    // Refresh rate every 5 minutes instead of 1 minute to reduce API calls
+    const interval = setInterval(loadFiatRate, 5 * 60_000);
     
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [quoteCurrency]);
+  }, [quoteCurrency, network]); // Added network to dependencies
 
   return {
     project: selectedProject,

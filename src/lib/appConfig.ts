@@ -48,16 +48,25 @@ export const getContractAddresses = (network: string = 'testnet') => {
 
 export const SUPPORTED_NETWORKS = Object.keys(NETWORK_CONFIG);
 
-// Reflector Oracle Contract Addresses (three official oracles per network)
+// Reflector Oracle Contract Addresses (working addresses from proven code)
 export const REFLECTOR_ORACLE_CONTRACTS = {
   mainnet: {
     external_cex: 'CAFJZQWSED6YAWZU3GWRTOCNPPCGBN32L7QV43XX5LZLFTK6JLN34DLN',
     pubnet: 'CALI2BYU2JE6WVRUFYTS6MSBNEHGJ35P4AVCZYF3B6QOE3QKOB2PLE6M',
-    forex: 'CBKGPWGKSKZF52CFHMTRR23TBWTPMRDIYZ4O2P5VS65BMHYH4DXMCJZC'
+    forex: 'CBXEUUO3FWPQJE2ZRRF6J5DHHRUDFO3SOWSB7BAFF3TKA3AVCVMEDOEN'
   },
   testnet: {
     external_cex: 'CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63',
     pubnet: 'CAVLP5DH2GJPZMVO7IJY4CVOD5MWEFTJFVPD2YY2FQXOQHRGHK4D6HLP',
     forex: 'CCSSOHTBL3LEWUCBBEB5NJFC2OKFRC74OWEIJIZLRJBGAAU4VMU5NV4W'
   }
+};
+
+// Cache and rate limiting configuration
+export const CACHE_CONFIG = {
+  PRICE_TTL: 5 * 60 * 1000, // 5 minutes
+  ASSET_LIST_TTL: 24 * 60 * 60 * 1000, // 24 hours
+  MAX_MEMORY_ENTRIES: 1000,
+  RATE_LIMIT_WINDOW: 10_000, // 10 seconds
+  RATE_LIMIT_BURST: 50, // 50 requests per window
 };
