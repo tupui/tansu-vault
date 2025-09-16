@@ -222,21 +222,13 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
     return result;
   }, [filteredTransactions, fiatAmounts]);
 
-  // Convert USD to target fiat currency
+  // Convert USD to target fiat currency using direct FX rate
   const convertFromUSD = useCallback(async (usdAmount: number, targetCurrency: string): Promise<number> => {
     if (targetCurrency === 'USD') return usdAmount;
     
     try {
-      // Clear FX cache to ensure fresh rates when currency changes
-      const { clearFxCaches } = await import('@/lib/reflector');
-      clearFxCaches(network === 'mainnet' ? 'mainnet' : 'testnet');
-      
-      const rate = await getAssetPrice('USD', targetCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
-      if (!rate || rate <= 0) {
-        console.warn(`Invalid rate for USD to ${targetCurrency}: ${rate}`);
-        return usdAmount; // Fallback to USD amount
-      }
-      return usdAmount * rate;
+      const { convertUsd } = await import('@/lib/fx');
+      return await convertUsd(usdAmount, targetCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
     } catch (error) {
       console.warn(`Failed to convert USD to ${targetCurrency}:`, error);
       return usdAmount; // Fallback to USD amount

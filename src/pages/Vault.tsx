@@ -152,7 +152,7 @@ const Vault: React.FC = () => {
                           {fmt(projectVaultData.vaultBalance)} XLM
                         </p>
                         <p className="text-sm text-muted-foreground">
-                        {projectVaultData.vaultBalance && projectVaultData.xlmFiatRate ? 
+                        {projectVaultData.vaultBalance != null && projectVaultData.xlmFiatRate != null ? 
                           fmtFiat(projectVaultData.vaultBalance * projectVaultData.xlmFiatRate) : '—'
                         }
                         </p>
@@ -163,7 +163,7 @@ const Vault: React.FC = () => {
                           {fmt(projectVaultData.walletBalance)} XLM
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {projectVaultData.walletBalance && projectVaultData.xlmFiatRate ? 
+                          {projectVaultData.walletBalance != null && projectVaultData.xlmFiatRate != null ? 
                             fmtFiat(projectVaultData.walletBalance * projectVaultData.xlmFiatRate) : '—'
                           }
                         </p>

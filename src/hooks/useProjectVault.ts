@@ -86,19 +86,16 @@ export const useProjectVault = (
     };
   }, [selectedProject, projectWalletAddress, network]);
 
-  // Load XLM fiat rate (reduced frequency to minimize API calls)
+  // Load XLM fiat rate with robust fallback
   useEffect(() => {
     let mounted = true;
     
     const loadFiatRate = async () => {
       try {
-        // Clear FX cache when currency changes to ensure fresh rates
-        const { clearFxCaches } = await import('@/lib/reflector');
-        clearFxCaches(network === 'mainnet' ? 'mainnet' : 'testnet');
-        
-        const rate = await getAssetPrice('XLM', quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+        const { getXlmRateWithFallback } = await import('@/lib/fx');
+        const rate = await getXlmRateWithFallback(quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
         if (mounted) {
-          setXlmFiatRate(rate && rate > 0 ? rate : null);
+          setXlmFiatRate(rate);
         }
       } catch (err) {
         console.warn('Failed to load XLM fiat rate:', err);
@@ -110,14 +107,14 @@ export const useProjectVault = (
 
     loadFiatRate();
     
-    // Refresh rate every 5 minutes instead of 1 minute to reduce API calls
+    // Refresh rate every 5 minutes
     const interval = setInterval(loadFiatRate, 5 * 60_000);
     
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [quoteCurrency, network]); // Added network to dependencies
+  }, [quoteCurrency, network]);
 
   return {
     project: selectedProject,

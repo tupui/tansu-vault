@@ -170,6 +170,17 @@ class ReflectorPriceEngine {
   private async fetchAssetPriceInternal(assetCode: string, quote: string): Promise<number> {
     const asset = parseAsset(assetCode);
     
+    // Special case: Direct fiat-to-fiat conversion (avoid pricing fiat as asset)
+    if (asset.type === AssetType.Other && quote !== 'USD') {
+      // If both base and quote are fiat, use FX oracle directly
+      if (assetCode === 'USD') {
+        return await this.getFxRate(quote);
+      } else {
+        // For other fiat currencies, this should not happen in practice
+        throw new Error(`Unsupported fiat-to-fiat conversion: ${assetCode} to ${quote}`);
+      }
+    }
+    
     // Handle fiat-to-fiat conversion via FX oracle
     if (quote !== 'USD' && asset.type === AssetType.Other) {
       const usdPrice = await this.getAssetPrice(assetCode, 'USD');
