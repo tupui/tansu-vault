@@ -255,6 +255,10 @@ class ReflectorPriceEngine {
     fxRateCache.clear();
     this.pendingRequests.clear();
   }
+
+  public clearFxCache(): void {
+    fxRateCache.clear();
+  }
 }
 
 // Singleton instances
@@ -281,4 +285,23 @@ export const getAssetPrices = async (
 ): Promise<Record<string, number>> => {
   const engine = getPriceEngine(network);
   return engine.getPrices(assets, quote);
+};
+
+// Clear caches when currency changes
+export const clearPriceCaches = (network?: 'mainnet' | 'testnet') => {
+  if (network) {
+    getPriceEngine(network).clearCache();
+  } else {
+    mainnetEngine.clearCache();
+    testnetEngine.clearCache();
+  }
+};
+
+export const clearFxCaches = (network?: 'mainnet' | 'testnet') => {
+  if (network) {
+    getPriceEngine(network).clearFxCache();
+  } else {
+    mainnetEngine.clearFxCache();
+    testnetEngine.clearFxCache();
+  }
 };

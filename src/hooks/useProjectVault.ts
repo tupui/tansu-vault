@@ -92,11 +92,16 @@ export const useProjectVault = (
     
     const loadFiatRate = async () => {
       try {
+        // Clear FX cache when currency changes to ensure fresh rates
+        const { clearFxCaches } = await import('@/lib/reflector');
+        clearFxCaches(network === 'mainnet' ? 'mainnet' : 'testnet');
+        
         const rate = await getAssetPrice('XLM', quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
         if (mounted) {
-          setXlmFiatRate(rate || 0);
+          setXlmFiatRate(rate && rate > 0 ? rate : null);
         }
       } catch (err) {
+        console.warn('Failed to load XLM fiat rate:', err);
         if (mounted) {
           setXlmFiatRate(null);
         }

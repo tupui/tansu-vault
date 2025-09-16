@@ -227,7 +227,15 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
     if (targetCurrency === 'USD') return usdAmount;
     
     try {
+      // Clear FX cache to ensure fresh rates when currency changes
+      const { clearFxCaches } = await import('@/lib/reflector');
+      clearFxCaches(network === 'mainnet' ? 'mainnet' : 'testnet');
+      
       const rate = await getAssetPrice('USD', targetCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+      if (!rate || rate <= 0) {
+        console.warn(`Invalid rate for USD to ${targetCurrency}: ${rate}`);
+        return usdAmount; // Fallback to USD amount
+      }
       return usdAmount * rate;
     } catch (error) {
       console.warn(`Failed to convert USD to ${targetCurrency}:`, error);
@@ -254,14 +262,16 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
         // Ignore rate fetching errors, continue with current prices
       }
 
-      // Pre-compute FX factor (USD -> target fiat)
+      // Pre-compute FX factor (USD -> target fiat) - fresh calculation each time
       let fxFactor = 1;
-      try {
-        if (quoteCurrency !== 'USD') {
+      if (quoteCurrency !== 'USD') {
+        try {
           fxFactor = await convertFromUSD(1, quoteCurrency);
+          console.log(`FX Factor for USD to ${quoteCurrency}:`, fxFactor);
+        } catch (error) {
+          console.warn(`Failed to get FX factor for ${quoteCurrency}, falling back to USD:`, error);
+          fxFactor = 1;
         }
-      } catch {
-        fxFactor = 1;
       }
 
       // Cache for non-XLM asset prices to avoid redundant calls
