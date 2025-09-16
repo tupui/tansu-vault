@@ -123,8 +123,6 @@ const Vault: React.FC = () => {
                     <span className="text-sm text-green-600 font-medium">
                       ✓ {address === projectWalletAddress ? 'Address Connected' : 'Domain Connected'}
                     </span>
-                  ) : isMaintainer && !isDomainConnected && address !== projectWalletAddress ? (
-                    <span className="text-sm text-orange-600 font-medium">⚠ Connect via Domain</span>
                   ) : isMaintainer ? (
                     <span className="text-sm text-red-600 font-medium">✗ Wrong Domain</span>
                   ) : isConnected ? (
