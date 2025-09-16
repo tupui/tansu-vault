@@ -14,7 +14,7 @@ import {
 import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useToast } from '@/hooks/use-toast';
-import { WALLET_CONFIGS, getPrimaryWallets, getSecondaryWallets } from '@/lib/walletConfig';
+import { getPrimaryWallets, getSecondaryWallets } from '@/lib/walletConfig';
 import { sanitizeError } from '@/lib/validation';
 
 interface StratumWalletModalLightProps {
