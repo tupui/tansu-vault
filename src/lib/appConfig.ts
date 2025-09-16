@@ -12,7 +12,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
   mainnet: {
     name: 'mainnet',
     horizonUrl: 'https://horizon.stellar.org',
-    sorobanRpcUrl: 'https://soroban-rpc.mainnet.stellar.gateway.fm',
+    sorobanRpcUrl: 'https://mainnet.sorobanrpc.com',
     networkPassphrase: 'Public Global Stellar Network ; September 2015',
     sorobanDomainContract: 'CATRNPHYKNXAPNLHEYH55REB6YSAJLGCPA4YM6L3WUKSZOPI77M2UMKI',
     tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
@@ -37,7 +37,7 @@ export const getNetworkConfig = (network: string): NetworkConfig => {
   return config;
 };
 
-export const getContractAddresses = (network: string = 'testnet') => {
+export const getContractAddresses = (network: string = DEFAULT_NETWORK) => {
   const config = getNetworkConfig(network);
   return {
     TANSU_PROJECT: config.tansuProjectContract || '',
@@ -47,6 +47,17 @@ export const getContractAddresses = (network: string = 'testnet') => {
 };
 
 export const SUPPORTED_NETWORKS = Object.keys(NETWORK_CONFIG);
+
+// Default network for data loading (testnet for development)
+export const DEFAULT_NETWORK: 'mainnet' | 'testnet' = 'testnet';
+
+// Default network for pricing (mainnet for accuracy)
+export const DEFAULT_PRICING_NETWORK: 'mainnet' | 'testnet' = 'mainnet';
+
+// Helper to convert network string to WalletKit NetworkType
+export const getWalletNetworkType = (network: 'mainnet' | 'testnet'): 'MAINNET' | 'TESTNET' => {
+  return network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+};
 
 // Reflector Oracle Contract Addresses (working addresses from proven code)
 export const REFLECTOR_ORACLE_CONTRACTS = {

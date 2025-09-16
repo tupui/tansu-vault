@@ -1,4 +1,5 @@
 import { getAssetPrice } from '@/lib/reflector';
+import { DEFAULT_NETWORK } from '@/lib/appConfig';
 
 // Supported fiat currencies fetched dynamically from Reflector FX Oracle
 export interface FiatCurrency {
@@ -44,7 +45,7 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
 /**
  * Fetch available fiat currencies from on-chain oracle (Reflector)
  */
-export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
+export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<FiatCurrency[]> {
   // Use static fallback to avoid oracle calls that cause errors
   const essentialCurrencies: FiatCurrency[] = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },

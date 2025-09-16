@@ -1,6 +1,6 @@
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
 import { Contract, nativeToScVal, scValToNative, xdr, TransactionBuilder, Account } from '@stellar/stellar-sdk';
-import { getNetworkConfig, getContractAddresses } from './appConfig';
+import { getNetworkConfig, getContractAddresses, DEFAULT_NETWORK } from './appConfig';
 
 
 export interface TansuProject {
@@ -22,7 +22,7 @@ export interface TansuProject {
 /**
  * Updated implementations using the new contract services
  */
-export async function searchTansuProjects(query: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<TansuProject[]> {
+export async function searchTansuProjects(query: string, network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<TansuProject[]> {
   try {
     const { createProjectService } = await import('./soroban-contract-services');
     const projectService = createProjectService(network);
@@ -63,7 +63,7 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
   }
 }
 
-export async function getTansuProject(identifier: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<TansuProject | null> {
+export async function getTansuProject(identifier: string, network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<TansuProject | null> {
   try {
     const { createProjectService } = await import('./soroban-contract-services');
     const projectService = createProjectService(network);
@@ -88,7 +88,7 @@ export async function getTansuProject(identifier: string, network: 'mainnet' | '
   }
 }
 
-export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<string | null> {
+export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<string | null> {
   try {
     const { resolveSorobanDomain: resolveDomainUtil } = await import('./soroban-domains');
     return await resolveDomainUtil(domain, network);
@@ -98,7 +98,7 @@ export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 
   }
 }
 
-export async function isProjectMaintainer(projectId: string, walletAddress: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<boolean> {
+export async function isProjectMaintainer(projectId: string, walletAddress: string, network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<boolean> {
   try {
     const { createProjectService } = await import('./soroban-contract-services');
     const projectService = createProjectService(network);
@@ -113,7 +113,7 @@ export async function isProjectMaintainer(projectId: string, walletAddress: stri
 /**
  * Get project vault balance and statistics
  */
-export async function getProjectVaultStats(projectId: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<{
+export async function getProjectVaultStats(projectId: string, network: 'mainnet' | 'testnet' = DEFAULT_NETWORK): Promise<{
   vaultBalance: string;
   walletBalance: string;
   totalDeposited: string;

@@ -17,13 +17,10 @@ export class ReflectorOracleClient {
   private networkPassphrase: string;
 
   constructor(network: 'mainnet' | 'testnet') {
-    const rpcUrl = network === 'mainnet'
-      ? 'https://soroban-rpc.mainnet.stellar.gateway.fm'
-      : 'https://soroban-testnet.stellar.org:443';
-
-    this.server = new SorobanServer(rpcUrl);
+    const config = getNetworkConfig(network);
+    this.server = new SorobanServer(config.sorobanRpcUrl);
     this.contracts = REFLECTOR_ORACLE_CONTRACTS[network];
-    this.networkPassphrase = getNetworkConfig(network).networkPassphrase;
+    this.networkPassphrase = config.networkPassphrase;
   }
 
   private getCacheKey(base: string, quote: string) {

@@ -23,6 +23,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
 import testnetContracts from '@/config/testnet.contracts.json';
+import { DEFAULT_NETWORK, getWalletNetworkType } from './appConfig';
 
 // Network configuration
 export const NETWORKS = {
@@ -48,7 +49,7 @@ export const NETWORK_DETAILS = {
 } as const;
 
 // Current network state
-let currentNetwork: NetworkType = 'TESTNET';
+let currentNetwork: NetworkType = getWalletNetworkType(DEFAULT_NETWORK);
 let horizonServer: Horizon.Server;
 let rpcServer: SorobanServer;
 let walletKit: StellarWalletsKit | null = null;
@@ -67,7 +68,7 @@ export const TESTNET_VAULT_ADDRESS = 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJ
 
 // Contract addresses based on network
 export const getContractAddresses = () => {
-  if (currentNetwork === 'TESTNET') {
+  if (currentNetwork === getWalletNetworkType(DEFAULT_NETWORK)) {
     // Explicitly use the provided testnet vault address. No other logic.
     return {
       DEFINDEX_FACTORY: testnetContracts.ids.defindex_factory,
@@ -83,7 +84,7 @@ export const getContractAddresses = () => {
   };
 };
 
-export const initWalletKit = (network: NetworkType = 'TESTNET') => {
+export const initWalletKit = (network: NetworkType = getWalletNetworkType(DEFAULT_NETWORK)) => {
   const networkConfig = NETWORK_DETAILS[network];
   
   if (!walletKit || currentNetwork !== network) {
