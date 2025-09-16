@@ -210,6 +210,48 @@ export class DeFindexVaultService {
   }
 
   /**
+   * Get total supply of vault shares
+   */
+  async getTotalSupply(): Promise<string> {
+    try {
+      const result = await this.createSimulationTransaction('total_supply', []);
+      
+      const extractValue = (result: any) => {
+        if (result?.result?.retval) {
+          return scValToNative(result.result.retval);
+        }
+        return '0';
+      };
+
+      const totalSupply = extractValue(result);
+      return this.i128ToAmount(totalSupply || '0');
+    } catch (error) {
+      throw new Error(`Failed to get total supply: ${error}`);
+    }
+  }
+
+  /**
+   * Calculate how many shares to burn for a given XLM amount
+   */
+  async calculateSharesToBurn(xlmAmount: string): Promise<string> {
+    try {
+      const totalSupply = await this.getTotalSupply();
+      const totalManagedFunds = await this.getVaultTotalBalance();
+      
+      if (parseFloat(totalSupply) === 0 || parseFloat(totalManagedFunds) === 0) {
+        throw new Error('Vault has no shares or funds');
+      }
+      
+      const sharePrice = parseFloat(totalManagedFunds) / parseFloat(totalSupply);
+      const sharesToBurn = parseFloat(xlmAmount) / sharePrice;
+      
+      return sharesToBurn.toString();
+    } catch (error) {
+      throw new Error(`Failed to calculate shares to burn: ${error}`);
+    }
+  }
+
+  /**
    * Get comprehensive vault statistics
    */
   async getVaultStats(): Promise<VaultStats> {
@@ -524,6 +566,56 @@ export class DeFindexVaultService {
   }
 
   /**
+   * Simple deposit function for testing
+   */
+  async deposit(userAddress: string, amount: string): Promise<string> {
+    try {
+      const amountI128 = this.amountToI128(amount);
+      
+      // Convert amount to ScVal format
+      const amountScVal = nativeToScVal(amountI128, { type: 'i128' });
+      
+      // Create a simple deposit call
+      // DeFindex deposit function signature:
+      // fn deposit(amounts_desired: vec<i128>, amounts_min: vec<i128>, from: address, invest: bool)
+      // The vec<i128> should contain one element for each asset in the vault
+      const sourceAccount = new Account(userAddress, '0');
+      const operation = this.contract.call('deposit', 
+        nativeToScVal([amountScVal], { type: 'vec' }), // amounts_desired - one amount for the XLM asset
+        nativeToScVal([amountScVal], { type: 'vec' }), // amounts_min (same as desired for no slippage)
+        nativeToScVal(userAddress, { type: 'address' }), // from
+        nativeToScVal(true, { type: 'bool' }) // invest
+      );
+
+      const transaction = new TransactionBuilder(sourceAccount, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      // Simulate first
+      const simulation = await this.rpcServer.simulateTransaction(transaction);
+      if (SorobanRpc.Api.isSimulationError(simulation)) {
+        console.error('Deposit simulation error:', JSON.stringify(simulation.error, null, 2));
+        throw new Error(`Deposit simulation failed: ${JSON.stringify(simulation.error)}`);
+      }
+
+      console.log('Deposit simulation successful:', JSON.stringify(simulation.result, null, 2));
+
+      // Prepare the transaction
+      const prepared = await this.rpcServer.prepareTransaction(transaction);
+      
+      // Return the XDR for signing
+      return prepared.toXDR();
+    } catch (error) {
+      console.error('Deposit error details:', error);
+      throw new Error(`Deposit failed: ${error}`);
+    }
+  }
+
+  /**
    * Prepare deposit transaction (returns unsigned XDR)
    */
   async prepareDeposit(
@@ -568,6 +660,56 @@ export class DeFindexVaultService {
       return prepared.toXDR();
     } catch (error) {
       throw new Error(`Failed to prepare deposit: ${error}`);
+    }
+  }
+
+  /**
+   * Simple withdraw function for testing
+   * Note: DeFindex withdraw function takes withdraw_shares (number of vault shares to burn) as first parameter
+   * This is different from withdrawing a specific amount of assets
+   */
+  async withdraw(userAddress: string, sharesToBurn: string, slippagePercent: number = 5): Promise<string> {
+    try {
+      const sharesI128 = this.amountToI128(sharesToBurn);
+      
+      // Convert shares to ScVal format
+      const sharesScVal = nativeToScVal(sharesI128, { type: 'i128' });
+      
+      // For min_amounts_out, we need to calculate the minimum amounts we expect to receive
+      // This is a simplified approach - in practice, you'd want to calculate this based on current vault ratios
+      const minAmountScVal = nativeToScVal('0', { type: 'i128' }); // Set to 0 for now, but should be calculated properly
+      
+      // Create a simple withdraw call
+      // DeFindex withdraw function signature:
+      // fn withdraw(withdraw_shares: i128, min_amounts_out: vec<i128>, from: address)
+      const sourceAccount = new Account(userAddress, '0');
+      const operation = this.contract.call('withdraw',
+        sharesScVal, // withdraw_shares
+        nativeToScVal([minAmountScVal], { type: 'vec' }), // min_amounts_out
+        nativeToScVal(userAddress, { type: 'address' }) // from
+      );
+
+      const transaction = new TransactionBuilder(sourceAccount, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(30)
+        .build();
+
+      // Simulate first
+      const simulation = await this.rpcServer.simulateTransaction(transaction);
+      if (SorobanRpc.Api.isSimulationError(simulation)) {
+        throw new Error(`Withdraw simulation failed: ${JSON.stringify(simulation.error)}`);
+      }
+
+      // Prepare the transaction
+      const prepared = await this.rpcServer.prepareTransaction(transaction);
+      
+      // Return the XDR for signing
+      return prepared.toXDR();
+    } catch (error) {
+      throw new Error(`Withdraw failed: ${error}`);
     }
   }
 

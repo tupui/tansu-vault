@@ -263,7 +263,7 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
     const defindexService = getDeFindexService('testnet');
     
     // Prepare the deposit transaction
-    const unsignedXdr = await defindexService.prepareDeposit(userAddress, amount, true);
+    const unsignedXdr = await defindexService.deposit(userAddress, amount);
     
     // Sign the transaction using the wallet
     const signedXdr = await signTransaction(unsignedXdr);
@@ -276,13 +276,17 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
   }
 };
 
-export const withdrawFromVault = async (userAddress: string, amount: string, slippagePercent: number = 5): Promise<string> => {
+export const withdrawFromVault = async (userAddress: string, xlmAmount: string, slippagePercent: number = 5): Promise<string> => {
   try {
     const { getDeFindexService } = await import('./defindex-service');
     const defindexService = getDeFindexService('testnet');
     
+    // Calculate how many shares to burn for the given XLM amount
+    const sharesToBurn = await defindexService.calculateSharesToBurn(xlmAmount);
+    
     // Prepare the withdrawal transaction
-    const unsignedXdr = await defindexService.prepareWithdraw(userAddress, amount, slippagePercent);
+    // Note: DeFindex withdraw takes shares to burn, not asset amount
+    const unsignedXdr = await defindexService.withdraw(userAddress, sharesToBurn, slippagePercent);
     
     // Sign the transaction using the wallet
     const signedXdr = await signTransaction(unsignedXdr);
@@ -291,7 +295,7 @@ export const withdrawFromVault = async (userAddress: string, amount: string, sli
     const hash = await defindexService.submitTransaction(signedXdr);
     return hash;
   } catch (error) {
-    throw new Error(`Withdrawal failed: ${error}`);
+    throw new Error(`Withdrawal failed: ${sanitizeError(error)}`);
   }
 };
 
