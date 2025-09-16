@@ -37,7 +37,7 @@ const Vault: React.FC = () => {
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-4xl font-bold text-foreground">Project Vault Management</h1>
+          <h1 className="text-4xl font-bold text-foreground">Treasury Management</h1>
           <p className="text-muted-foreground text-lg">
             {selectedProject ? 
               `Manage the treasury vault for ${selectedProject.name}` :
@@ -199,18 +199,7 @@ const Vault: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <h3 className="text-xl font-semibold text-muted-foreground mb-2">
-                No Project Selected
-              </h3>
-              <p className="text-muted-foreground">
-                Search for and select a Tansu project to view and manage its vault.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        ) : null}
       </div>
     </Layout>
   );

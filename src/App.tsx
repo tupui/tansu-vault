@@ -27,8 +27,8 @@ const App = () => (
               <div className="light min-h-screen clean-bg">
                 <Routes>
                   <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/vault" element={<Vault />} />
+                  <Route path="/vault" element={<Dashboard />} />
+                  <Route path="/treasury" element={<Vault />} />
                   <Route path="/carbon" element={<CarbonOffset />} />
                   <Route path="/admin" element={<Admin />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

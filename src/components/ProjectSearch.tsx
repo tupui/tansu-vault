@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, ExternalLink, Users, Calendar, CheckCircle } from 'lucide-react';
+import { Search, ExternalLink, Users, Calendar } from 'lucide-react';
 import { searchTansuProjects, type TansuProject } from '@/lib/tansu-contracts';
 import { resolveSorobanDomain as resolveDomain } from '@/lib/soroban-domains';
 import { useNetwork } from '@/contexts/NetworkContext';
@@ -120,32 +120,6 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
             className="pl-10"
           />
         </div>
-
-        {/* Selected Project Display */}
-        {selectedProject && (
-          <Card className="border-success/50 bg-success/5">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-success" />
-                <span className="font-medium text-success">Connected Project</span>
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <h4 className="font-semibold">{selectedProject.name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedProject.description}</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <Badge variant="outline" className="text-xs">
-                    {selectedProject.domain}
-                  </Badge>
-                  <Badge variant={selectedProject.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                    {selectedProject.status}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Loading State */}
         {loading && (

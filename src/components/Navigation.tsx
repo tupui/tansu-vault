@@ -62,23 +62,23 @@ export const Navigation = () => {
         <div className="hidden md:flex items-center gap-2">
           <Button 
             asChild
-            variant={isActive('/dashboard') ? 'default' : 'ghost'} 
+            variant={isActive('/vault') ? 'default' : 'ghost'} 
             size="sm"
           >
-            <Link to="/dashboard">
+            <Link to="/vault">
               <BarChart3 className="mr-2 h-4 w-4" />
-              Dashboard
+              Vault
             </Link>
           </Button>
           
           <Button 
             asChild
-            variant={isActive('/vault') ? 'default' : 'ghost'} 
+            variant={isActive('/treasury') ? 'default' : 'ghost'} 
             size="sm"
           >
-            <Link to="/vault">
+            <Link to="/treasury">
               <Vault className="mr-2 h-4 w-4" />
-              Vault
+              Treasury
             </Link>
           </Button>
           
