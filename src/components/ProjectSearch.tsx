@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, ExternalLink, Users, Calendar, CheckCircle } from 'lucide-react';
-import { searchTansuProjects, resolveSorobanDomain, type TansuProject } from '@/lib/tansu-contracts';
+import { searchTansuProjects, type TansuProject } from '@/lib/tansu-contracts';
+import { resolveSorobanDomain as resolveDomain } from '@/lib/soroban-domains';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,8 +54,8 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
     
     try {
       // Resolve the domain to get the wallet address (use project name per Tansu spec)
-      const domainInput = (project.name || '').trim();
-      const walletAddress = await resolveSorobanDomain(domainInput, network);
+      const domainInput = (project.name || '').trim().toLowerCase();
+      const walletAddress = await resolveDomain(domainInput, (network as 'mainnet' | 'testnet'));
       
       if (!walletAddress) {
         toast({
