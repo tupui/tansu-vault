@@ -51,7 +51,8 @@ export const useWalletState = (): WalletContextType => {
   // Initialize wallet kit and restore connection
   useEffect(() => {
     const savedAddress = localStorage.getItem('tansu_wallet_address');
-    if (savedAddress) {
+    const savedWalletId = localStorage.getItem('tansu_wallet_id');
+    if (savedAddress && savedWalletId) {
       setAddress(savedAddress);
       refreshBalances(savedAddress);
     }
@@ -79,6 +80,7 @@ export const useWalletState = (): WalletContextType => {
       const connectedAddress = await connectWallet(walletId, targetNetwork);
       setAddress(connectedAddress);
       localStorage.setItem('tansu_wallet_address', connectedAddress);
+      localStorage.setItem('tansu_wallet_id', walletId);
       await refreshBalances(connectedAddress);
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
@@ -93,6 +95,7 @@ export const useWalletState = (): WalletContextType => {
     setBalances([]);
     setError(null);
     localStorage.removeItem('tansu_wallet_address');
+    localStorage.removeItem('tansu_wallet_id');
   };
 
   const refreshBalances = async (walletAddress?: string) => {

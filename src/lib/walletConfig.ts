@@ -27,7 +27,7 @@ export const WALLET_CONFIGS: Record<string, WalletConfig> = {
     name: 'xBull Wallet',
     description: 'Multi-platform wallet (Mobile, Web, Extension)',
     type: 'extension',
-    detectAvailability: () => typeof window !== 'undefined' && !!(window as any).xBullWalletConnect,
+    detectAvailability: () => typeof window !== 'undefined' && (!!(window as any).xBullWalletConnect || !!(window as any).xBull),
     installUrl: 'https://xbull.app/'
   },
   ledger: {
