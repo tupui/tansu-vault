@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Shield, TrendingUp, Leaf, Users, Zap, Globe } from 'lucide-react';
-import tansuLogo from '@/assets/tansu-logo.svg';
 import { motion } from 'framer-motion';
 const Index = () => {
   const features = [{
@@ -34,10 +33,9 @@ const Index = () => {
       
       <div className="pt-24">
         {/* Hero Section */}
-        <section className="relative overflow-hidden">
-          <div className="container mx-auto px-6 py-20">
-            <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center">
-              <motion.div initial={{
+        <section className="relative overflow-hidden py-12 lg:py-20">
+          <div className="container mx-auto px-6">
+            <motion.div initial={{
               opacity: 0,
               y: 20
             }} animate={{
@@ -45,40 +43,36 @@ const Index = () => {
               y: 0
             }} transition={{
               duration: 0.6
-            }} className="flex-1 space-y-8">
-                <div className="flex items-center gap-6 mb-6">
-                  {/* Logo on same row */}
-                  <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl overflow-hidden shadow-stellar border border-border/20 flex-shrink-0">
-                    <img src={tansuLogo} alt="Tansu DAO Logo" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1">
-                    <Badge className="bg-gradient-stellar text-primary-foreground border-0 mb-3">
-                      <Zap className="mr-1 h-3 w-3" />
-                      Powered by DeFindex & Stellar
-                    </Badge>
-                    <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight">
-                      <span className="bg-gradient-stellar bg-clip-text text-transparent">Tansu Vault</span>
-                      <br />
-                      for Tansu Projects
-                    </h1>
-                  </div>
-                </div>
-                
-                <p className="text-xl text-muted-foreground max-w-2xl">
-                  Transform idle project treasuries into yield-generating assets. 
-                  Connect your Tansu project to our institutional-grade DeFi vault 
-                  and start earning sustainable returns today.
-                </p>
+            }} className="text-center max-w-4xl mx-auto space-y-8">
+              
+              <Badge className="bg-gradient-stellar text-primary-foreground border-0 mb-6">
+                <Zap className="mr-1 h-3 w-3" />
+                Powered by DeFindex & Stellar
+              </Badge>
+              
+              <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
+                <span className="bg-gradient-stellar bg-clip-text text-transparent">Transform Your Treasury</span>
+                <br />
+                <span className="text-foreground">Into Yield-Generating Assets</span>
+              </h1>
+              
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Connect your Tansu project to our institutional-grade DeFi vault. 
+                Earn sustainable returns while maintaining full liquidity and supporting carbon neutrality.
+              </p>
 
-                <div className="flex flex-wrap gap-4">
-                  <Button size="lg" className="bg-gradient-stellar text-primary-foreground border-0 glow-stellar hover:shadow-stellar transition-all duration-300" onClick={() => window.location.href = '/dashboard'}>
-                    Get Started
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
+              <div className="flex flex-wrap justify-center gap-4 pt-4">
+                <Button size="lg" className="bg-gradient-stellar text-primary-foreground border-0 glow-stellar hover:shadow-stellar transition-all duration-300" onClick={() => window.location.href = '/vault'}>
+                  Get Started
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => window.location.href = '/treasury'}>
+                  View Treasury
+                </Button>
+              </div>
 
-                {/* Stats */}
-                <motion.div initial={{
+              {/* Stats */}
+              <motion.div initial={{
                 opacity: 0,
                 y: 20
               }} animate={{
@@ -88,13 +82,9 @@ const Index = () => {
                 duration: 0.6,
                 delay: 0.2
               }} className="pt-8">
-                  <VaultStats />
-                </motion.div>
+                <VaultStats />
               </motion.div>
-
-              {/* Hero image - hidden on mobile, shown on larger screens */}
-              
-            </div>
+            </motion.div>
           </div>
         </section>
 
