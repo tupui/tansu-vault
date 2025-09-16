@@ -99,9 +99,14 @@ const Vault: React.FC = () => {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-foreground">{selectedProject.name}</h2>
                 <p className="text-muted-foreground">{selectedProject.description}</p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <span className="font-mono">{selectedProject.domain}</span>
-                </p>
+                  {projectWalletAddress && (
+                    <span className="font-mono bg-muted px-2 py-1 rounded text-xs">
+                      {projectWalletAddress.slice(0, 8)}...{projectWalletAddress.slice(-8)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

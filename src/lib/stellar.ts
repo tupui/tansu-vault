@@ -134,13 +134,8 @@ export const connectWallet = async (walletId: string, network: NetworkType = cur
   const officialWalletId = getOfficialWalletId(walletId);
   
   try {
-    // Use openModal for proper wallet connection flow (required for QR codes, etc.)
-    await kit.openModal({
-      onWalletSelected: async (option) => {
-        await kit.setWallet(option.id);
-      }
-    });
-    
+    // Direct wallet connection without opening the kit modal
+    await kit.setWallet(officialWalletId);
     const { address } = await kit.getAddress();
     return address;
   } catch (error: any) {

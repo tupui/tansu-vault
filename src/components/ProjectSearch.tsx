@@ -19,6 +19,7 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
   const [projects, setProjects] = useState<TansuProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [resolvingAddress, setResolvingAddress] = useState<string | null>(null);
+  const [resolvedAddresses, setResolvedAddresses] = useState<Record<string, string>>({});
   const { network } = useNetwork();
   const { toast } = useToast();
 
@@ -53,17 +54,25 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
     setResolvingAddress(project.id);
     
     try {
-      // Resolve the domain to get the wallet address (use project name per Tansu spec)
-      const domainInput = (project.name || '').trim().toLowerCase();
-      const walletAddress = await resolveDomain(domainInput, (network as 'mainnet' | 'testnet'));
+      // Check if we already have the resolved address cached
+      let walletAddress = resolvedAddresses[project.id];
       
       if (!walletAddress) {
-        toast({
-          variant: 'destructive',
-          title: 'Domain Resolution Failed',
-          description: `Could not resolve ${domainInput} to a wallet address.`,
-        });
-        return;
+        // Resolve the domain to get the wallet address (use project name per Tansu spec)
+        const domainInput = (project.name || '').trim().toLowerCase();
+        walletAddress = await resolveDomain(domainInput, (network as 'mainnet' | 'testnet'));
+        
+        if (!walletAddress) {
+          toast({
+            variant: 'destructive',
+            title: 'Domain Resolution Failed',
+            description: `Could not resolve ${domainInput} to a wallet address.`,
+          });
+          return;
+        }
+
+        // Cache the resolved address
+        setResolvedAddresses(prev => ({ ...prev, [project.id]: walletAddress }));
       }
 
       onProjectSelect(project, walletAddress);
@@ -137,7 +146,7 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
               <Card 
                 key={project.id} 
                 className={`border-border/50 cursor-pointer transition-all hover:shadow-md ${
-                  selectedProject?.id === project.id ? 'ring-2 ring-success' : ''
+                  selectedProject?.id === project.id ? 'ring-2 ring-primary/50 bg-primary/5' : ''
                 }`}
               >
                 <CardContent className="p-4">
@@ -154,19 +163,29 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
                         {project.description}
                       </p>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <ExternalLink className="w-3 h-3" />
-                          <span className="font-mono">{project.domain}</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            <span className="font-mono">{project.domain}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span>{project.maintainers.length} maintainer{project.maintainers.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDate(project.created_at)}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          <span>{project.maintainers.length} maintainer{project.maintainers.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>{formatDate(project.created_at)}</span>
-                        </div>
+                        
+                        {resolvedAddresses[project.id] && (
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-mono bg-muted px-2 py-1 rounded">
+                              {resolvedAddresses[project.id].slice(0, 8)}...{resolvedAddresses[project.id].slice(-8)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
