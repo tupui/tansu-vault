@@ -87,12 +87,12 @@ const Vault: React.FC = () => {
         ) : (
           <div className="space-y-6">
             {/* Project Header */}
-            <div className="flex items-center gap-4 p-6 bg-accent/20 rounded-lg border border-accent/50">
+            <div className="flex items-center gap-4 p-6 bg-card border border-border rounded-lg shadow-sm">
               {projectLogo && (
                 <img 
                   src={projectLogo} 
                   alt={`${selectedProject.name} logo`}
-                  className="w-16 h-16 rounded-lg object-cover"
+                  className="w-16 h-16 rounded-lg object-cover border border-border"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
