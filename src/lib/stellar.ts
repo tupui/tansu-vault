@@ -64,7 +64,7 @@ const initializeNetwork = (network: NetworkType) => {
 // Initialize with testnet by default
 initializeNetwork('TESTNET');
 
-export const TESTNET_VAULT_ADDRESS = 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP';
+export const TESTNET_VAULT_ADDRESS = 'CB4CEQW6W2HNVN3RA5T327T66N4DGIC24FONEZFKGUZVZDINK4WC5MXI';
 
 // Contract addresses based on network
 export const getContractAddresses = () => {
@@ -262,13 +262,13 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
     const { getDeFindexService } = await import('./defindex-service');
     const defindexService = getDeFindexService('testnet');
     
-    // Prepare the deposit transaction
+    // Step 1: Get unsigned transaction XDR (includes simulation)
     const unsignedXdr = await defindexService.deposit(userAddress, amount);
     
-    // Sign the transaction using the wallet
+    // Step 2: Sign the transaction using the wallet
     const signedXdr = await signTransaction(unsignedXdr);
     
-    // Submit the signed transaction
+    // Step 3: Submit the signed transaction
     const hash = await defindexService.submitTransaction(signedXdr);
     return hash;
   } catch (error) {
@@ -284,15 +284,8 @@ export const withdrawFromVault = async (userAddress: string, xlmAmount: string, 
     // Calculate how many shares to burn for the given XLM amount
     const sharesToBurn = await defindexService.calculateSharesToBurn(xlmAmount);
     
-    // Prepare the withdrawal transaction
-    // Note: DeFindex withdraw takes shares to burn, not asset amount
-    const unsignedXdr = await defindexService.withdraw(userAddress, sharesToBurn, slippagePercent);
-    
-    // Sign the transaction using the wallet
-    const signedXdr = await signTransaction(unsignedXdr);
-    
-    // Submit the signed transaction
-    const hash = await defindexService.submitTransaction(signedXdr);
+    // Handle the complete withdrawal flow (simulate, sign, submit)
+    const hash = await defindexService.withdraw(userAddress, sharesToBurn, slippagePercent);
     return hash;
   } catch (error) {
     throw new Error(`Withdrawal failed: ${sanitizeError(error)}`);

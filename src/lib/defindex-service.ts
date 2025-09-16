@@ -6,7 +6,7 @@ import {
   scValToNative,
   xdr
 } from '@stellar/stellar-sdk';
-import { Server as SorobanServer, Api } from '@stellar/stellar-sdk/rpc';
+import { Server as SorobanServer, Api as SorobanRpc } from '@stellar/stellar-sdk/rpc';
 import { getNetworkConfig } from './appConfig';
 
 /**
@@ -70,7 +70,7 @@ export class DeFindexVaultService {
 
   constructor(network: 'mainnet' | 'testnet' = 'testnet') {
     const config = getNetworkConfig(network);
-    this.vaultContractId = config.vaultContract || 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP';
+    this.vaultContractId = config.vaultContract || 'CB4CEQW6W2HNVN3RA5T327T66N4DGIC24FONEZFKGUZVZDINK4WC5MXI';
     this.contract = new Contract(this.vaultContractId);
     this.rpcServer = new SorobanServer(config.sorobanRpcUrl);
     this.networkPassphrase = config.networkPassphrase;
@@ -118,7 +118,7 @@ export class DeFindexVaultService {
 
     const simulation = await this.rpcServer.simulateTransaction(transaction);
     
-    if (Api.isSimulationError(simulation)) {
+    if (SorobanRpc.isSimulationError(simulation)) {
       throw new Error(`Simulation failed: ${simulation.error}`);
     }
 
@@ -575,11 +575,13 @@ export class DeFindexVaultService {
       // Convert amount to ScVal format
       const amountScVal = nativeToScVal(amountI128, { type: 'i128' });
       
+      // Use dummy account for simulation (prepareTransaction will update with correct sequence)
+      const sourceAccount = new Account(userAddress, '0');
+      
       // Create a simple deposit call
       // DeFindex deposit function signature:
       // fn deposit(amounts_desired: vec<i128>, amounts_min: vec<i128>, from: address, invest: bool)
       // The vec<i128> should contain one element for each asset in the vault
-      const sourceAccount = new Account(userAddress, '0');
       const operation = this.contract.call('deposit', 
         nativeToScVal([amountScVal], { type: 'vec' }), // amounts_desired - one amount for the XLM asset
         nativeToScVal([amountScVal], { type: 'vec' }), // amounts_min (same as desired for no slippage)
@@ -597,18 +599,15 @@ export class DeFindexVaultService {
 
       // Simulate first
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (SorobanRpc.Api.isSimulationError(simulation)) {
+      if (SorobanRpc.isSimulationError(simulation)) {
         console.error('Deposit simulation error:', JSON.stringify(simulation.error, null, 2));
         throw new Error(`Deposit simulation failed: ${JSON.stringify(simulation.error)}`);
       }
 
       console.log('Deposit simulation successful:', JSON.stringify(simulation.result, null, 2));
 
-      // Prepare the transaction
-      const prepared = await this.rpcServer.prepareTransaction(transaction);
-      
-      // Return the XDR for signing
-      return prepared.toXDR();
+      // Return the transaction XDR for signing (simple working pattern)
+      return transaction.toXDR();
     } catch (error) {
       console.error('Deposit error details:', error);
       throw new Error(`Deposit failed: ${error}`);
@@ -651,13 +650,12 @@ export class DeFindexVaultService {
 
       // Simulate to ensure it works
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (Api.isSimulationError(simulation)) {
+      if (SorobanRpc.isSimulationError(simulation)) {
         throw new Error(`Deposit simulation failed: ${simulation.error}`);
       }
 
-      // Prepare the transaction for signing
-      const prepared = await this.rpcServer.prepareTransaction(transaction);
-      return prepared.toXDR();
+      // Return the raw transaction XDR for signing (Stratum pattern)
+      return transaction.toXDR();
     } catch (error) {
       throw new Error(`Failed to prepare deposit: ${error}`);
     }
@@ -679,10 +677,12 @@ export class DeFindexVaultService {
       // This is a simplified approach - in practice, you'd want to calculate this based on current vault ratios
       const minAmountScVal = nativeToScVal('0', { type: 'i128' }); // Set to 0 for now, but should be calculated properly
       
+      // Use dummy account for simulation (prepareTransaction will update with correct sequence)
+      const sourceAccount = new Account(userAddress, '0');
+      
       // Create a simple withdraw call
       // DeFindex withdraw function signature:
       // fn withdraw(withdraw_shares: i128, min_amounts_out: vec<i128>, from: address)
-      const sourceAccount = new Account(userAddress, '0');
       const operation = this.contract.call('withdraw',
         sharesScVal, // withdraw_shares
         nativeToScVal([minAmountScVal], { type: 'vec' }), // min_amounts_out
@@ -699,15 +699,26 @@ export class DeFindexVaultService {
 
       // Simulate first
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (SorobanRpc.Api.isSimulationError(simulation)) {
+      if (SorobanRpc.isSimulationError(simulation)) {
         throw new Error(`Withdraw simulation failed: ${JSON.stringify(simulation.error)}`);
       }
 
-      // Prepare the transaction
-      const prepared = await this.rpcServer.prepareTransaction(transaction);
+      // Prepare the transaction with simulation results (required for Soroban)
+      const preparedTransaction = await this.rpcServer.prepareTransaction(transaction);
       
-      // Return the XDR for signing
-      return prepared.toXDR();
+      // Sign the prepared transaction using the wallet (Tansu pattern)
+      const { signTransaction } = await import('./stellar');
+      const signedXdr = await signTransaction(preparedTransaction);
+      
+      // Submit the signed transaction to the network
+      const signedTransaction = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
+      const result = await this.rpcServer.sendTransaction(signedTransaction);
+      
+      if (result.status === 'ERROR') {
+        throw new Error(`Transaction failed: ${result.errorResult}`);
+      }
+      
+      return result.hash;
     } catch (error) {
       throw new Error(`Withdraw failed: ${error}`);
     }
@@ -747,13 +758,13 @@ export class DeFindexVaultService {
 
       // Simulate to ensure it works
       const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (Api.isSimulationError(simulation)) {
+      if (SorobanRpc.isSimulationError(simulation)) {
         throw new Error(`Withdraw simulation failed: ${simulation.error}`);
       }
 
-      // Prepare the transaction for signing
-      const prepared = await this.rpcServer.prepareTransaction(transaction);
-      return prepared.toXDR();
+      // Assemble the transaction with simulation results
+      const assembledTransaction = SorobanRpc.assembleTransaction(transaction, simulation);
+      return assembledTransaction.toXDR();
     } catch (error) {
       throw new Error(`Failed to prepare withdrawal: ${error}`);
     }
@@ -763,31 +774,40 @@ export class DeFindexVaultService {
    * Submit a signed transaction to the network
    */
   async submitTransaction(signedXdr: string): Promise<string> {
+    // Use the exact Tansu pattern from TxService.ts
+    let sendResponse: any;
     try {
-      const signedTx = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
-      const result = await this.rpcServer.sendTransaction(signedTx);
-      
-      if (result.errorResult) {
-        throw new Error('Transaction submission failed');
-      }
-
-      // Poll for transaction result
-      const hash = result.hash;
-      for (let i = 0; i < 30; i++) { // Increased timeout for complex transactions
-        const txResult = await this.rpcServer.getTransaction(hash);
-        if (txResult.status === 'SUCCESS') {
-          return hash;
-        }
-        if (txResult.status === 'FAILED') {
-          throw new Error('Transaction failed on chain');
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-      
-      throw new Error('Transaction timed out');
-    } catch (error) {
-      throw new Error(`Failed to submit transaction: ${error}`);
+      // Try sending as XDR string first
+      sendResponse = await this.rpcServer.sendTransaction(signedXdr);
+    } catch (_error) {
+      // Fallback: convert to Transaction object
+      const transaction = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
+      sendResponse = await this.rpcServer.sendTransaction(transaction);
     }
+
+    if (sendResponse.status === "ERROR") {
+      const errorResultStr = JSON.stringify(sendResponse.errorResult);
+      throw new Error(`Transaction failed: ${errorResultStr}`);
+    }
+
+    if (sendResponse.status === "SUCCESS") {
+      return sendResponse.hash;
+    }
+
+    // If status is PENDING, wait for completion
+    const hash = sendResponse.hash;
+    for (let i = 0; i < 30; i++) {
+      const txResult = await this.rpcServer.getTransaction(hash);
+      if (txResult.status === 'SUCCESS') {
+        return hash;
+      }
+      if (txResult.status === 'FAILED') {
+        throw new Error('Transaction failed on chain');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    
+    throw new Error('Transaction timed out');
   }
 
   /**
