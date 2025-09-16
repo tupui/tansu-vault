@@ -239,8 +239,10 @@ export class TansuProjectContractService {
    */
   async isMaintainer(projectId: string, address: string): Promise<boolean> {
     try {
-      const maintainers = await this.getMaintainers(projectId);
-      return maintainers.includes(address);
+      // Fetch project via get_project using the computed project key
+      const project = await this.getProject(projectId);
+      if (!project || !Array.isArray(project.maintainers)) return false;
+      return project.maintainers.includes(address);
     } catch (error) {
       console.error('Failed to check maintainer status:', error);
       return false;
