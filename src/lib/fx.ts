@@ -1,15 +1,15 @@
-import { getOracleClient } from './reflector-client/oracle-client';
+import { getPriceEngine } from './reflector';
 import { getCurrentXlmUsdRate } from './kraken';
 
 /**
- * Get USD to fiat exchange rate using FOREX oracle
+ * Get USD to fiat exchange rate using proper Reflector engine
  */
 export async function getUsdFxRate(toCurrency: string, network: 'mainnet' | 'testnet'): Promise<number> {
   if (toCurrency === 'USD') return 1;
   
   try {
-    const client = getOracleClient(network);
-    const rate = await client.getFxRate(toCurrency);
+    const engine = getPriceEngine(network);
+    const rate = await engine.getPrice('USD', toCurrency);
     return rate && rate > 0 ? rate : 1;
   } catch (error) {
     console.warn(`Failed to get FX rate for USD to ${toCurrency}:`, error);
@@ -32,30 +32,24 @@ export async function convertUsd(usdAmount: number, toCurrency: string, network:
  */
 export async function getXlmRateWithFallback(toCurrency: string = 'USD', network: 'mainnet' | 'testnet'): Promise<number | null> {
   try {
-    // Try Reflector first
-    const client = getOracleClient(network);
-    const usdRate = await Promise.race([
-      client.getAssetPrice('XLM', 'USD'),
+    // Try Reflector engine first
+    const engine = getPriceEngine(network);
+    const rate = await Promise.race([
+      engine.getPrice('XLM', toCurrency),
       new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 5000)
       )
     ]);
     
-    if (usdRate && usdRate > 0) {
-      // Convert USD rate to target currency if needed
-      if (toCurrency === 'USD') {
-        return usdRate;
-      } else {
-        const fxRate = await getUsdFxRate(toCurrency, network);
-        return usdRate * fxRate;
-      }
+    if (rate && rate > 0) {
+      return rate;
     }
   } catch (error) {
     console.warn('Reflector XLM price failed, trying Kraken fallback:', error);
   }
   
   try {
-    // Fallback to Kraken for XLM/USD
+    // Fallback to Kraken for XLM/USD then convert if needed
     const usdRate = await getCurrentXlmUsdRate();
     if (usdRate && usdRate > 0) {
       if (toCurrency === 'USD') {

@@ -60,8 +60,10 @@ const Vault: React.FC = () => {
     return formatFiatAmount(amount);
   };
 
-  const canManageVault = selectedProject && isConnected && isMaintainer && isDomainConnected && 
-    connectedDomain === selectedProject.domain;
+  const canManageVault = selectedProject && isConnected && isMaintainer && (
+    (isDomainConnected && connectedDomain === selectedProject.domain) ||
+    (address === projectWalletAddress) // Allow if wallet address matches project address
+  );
 
   return (
     <Layout>
@@ -118,8 +120,10 @@ const Vault: React.FC = () => {
                   {projectVaultData.loading ? (
                     <span className="text-sm text-muted-foreground">Loading...</span>
                   ) : canManageVault ? (
-                    <span className="text-sm text-green-600 font-medium">✓ Domain Connected</span>
-                  ) : isMaintainer && !isDomainConnected ? (
+                    <span className="text-sm text-green-600 font-medium">
+                      ✓ {address === projectWalletAddress ? 'Address Connected' : 'Domain Connected'}
+                    </span>
+                  ) : isMaintainer && !isDomainConnected && address !== projectWalletAddress ? (
                     <span className="text-sm text-orange-600 font-medium">⚠ Connect via Domain</span>
                   ) : isMaintainer ? (
                     <span className="text-sm text-red-600 font-medium">✗ Wrong Domain</span>
@@ -192,7 +196,9 @@ const Vault: React.FC = () => {
                   <p className="text-muted-foreground">
                     {!isMaintainer 
                       ? 'You need to be a maintainer of this project to manage its vault.'
-                      : `Connect your wallet via the project's Soroban domain (${selectedProject.domain}) to manage the vault.`
+                      : address !== projectWalletAddress
+                        ? `Connect your wallet via the project's Soroban domain (${selectedProject.domain}) or use the project wallet address directly.`
+                        : 'Domain connection is required to manage the vault.'
                     }
                   </p>
                 </CardContent>
