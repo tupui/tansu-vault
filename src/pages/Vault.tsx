@@ -83,7 +83,7 @@ const Vault: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Vault Balance - {selectedProject.name}</span>
+                  <span>Treasury - {selectedProject.name}</span>
                   {projectVaultData.loading ? (
                     <span className="text-sm text-muted-foreground">Loading...</span>
                   ) : isMaintainer ? (
