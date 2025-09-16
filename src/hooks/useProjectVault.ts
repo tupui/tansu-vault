@@ -19,10 +19,6 @@ export interface ProjectVaultData {
   xlmFiatRate: number | null;
   totalFiatValue: number | null;
   
-  // Maintainer status
-  isMaintainer: boolean;
-  canManageVault: boolean;
-  
   // Loading states
   loading: boolean;
   error: string | null;
@@ -39,13 +35,11 @@ export const useProjectVault = (
   const [vaultBalance, setVaultBalance] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [xlmFiatRate, setXlmFiatRate] = useState<number | null>(null);
-  const [isMaintainer, setIsMaintainer] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const totalBalance = vaultBalance != null && walletBalance != null ? vaultBalance + walletBalance : null;
   const totalFiatValue = totalBalance != null && xlmFiatRate != null ? totalBalance * xlmFiatRate : null;
-  const canManageVault = isMaintainer && connectedWalletAddress != null;
 
   // Load project vault data when project changes
   useEffect(() => {
@@ -55,7 +49,6 @@ export const useProjectVault = (
       if (!selectedProject || !projectWalletAddress) {
         setVaultBalance(null);
         setWalletBalance(null);
-        setIsMaintainer(false);
         return;
       }
 
@@ -74,18 +67,6 @@ export const useProjectVault = (
           setVaultBalance(parseFloat(vaultStats.vaultBalance || '0'));
           setWalletBalance(nativeBalance ? parseFloat(nativeBalance.balance) : 0);
         }
-
-        // Check if connected wallet is a maintainer
-        if (connectedWalletAddress) {
-          const maintainerStatus = await isProjectMaintainer(
-            selectedProject.id, 
-            connectedWalletAddress, 
-            network
-          );
-          if (mounted) {
-            setIsMaintainer(maintainerStatus);
-          }
-        }
       } catch (err: any) {
         if (mounted) {
           setError(err?.message || 'Failed to load project vault data');
@@ -103,7 +84,7 @@ export const useProjectVault = (
     return () => {
       mounted = false;
     };
-  }, [selectedProject, projectWalletAddress, connectedWalletAddress, network]);
+  }, [selectedProject, projectWalletAddress, network]);
 
   // Load XLM fiat rate
   useEffect(() => {
@@ -141,8 +122,6 @@ export const useProjectVault = (
     totalBalance,
     xlmFiatRate,
     totalFiatValue,
-    isMaintainer,
-    canManageVault,
     loading,
     error,
   };

@@ -17,6 +17,11 @@ const Vault: React.FC = () => {
   
   const projectVaultData = useProjectVault(selectedProject, projectWalletAddress, address);
 
+  // Check maintainer status using existing project data (no RPC call needed)
+  const isMaintainer = selectedProject && address && Array.isArray(selectedProject.maintainers) 
+    ? selectedProject.maintainers.includes(address) 
+    : false;
+
   const handleProjectSelect = (project: TansuProject, walletAddress: string) => {
     setSelectedProject(project);
     setProjectWalletAddress(walletAddress);
@@ -30,7 +35,7 @@ const Vault: React.FC = () => {
     maximumFractionDigits: 2,
   }).format(amount);
 
-  const canManageVault = selectedProject && isConnected && projectVaultData.isMaintainer;
+  const canManageVault = selectedProject && isConnected && isMaintainer;
 
   return (
     <Layout>
@@ -74,38 +79,19 @@ const Vault: React.FC = () => {
 
         {selectedProject ? (
           <div className="space-y-6">
-            {/* Project Details */}
+            {/* Vault Balance */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>{selectedProject.name}</span>
+                  <span>Vault Balance - {selectedProject.name}</span>
                   {projectVaultData.loading ? (
                     <span className="text-sm text-muted-foreground">Loading...</span>
-                  ) : projectVaultData.isMaintainer ? (
+                  ) : isMaintainer ? (
                     <span className="text-sm text-green-600 font-medium">✓ Maintainer Access</span>
                   ) : isConnected ? (
                     <span className="text-sm text-red-600 font-medium">✗ No Access</span>
                   ) : null}
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Description</p>
-                    <p className="text-foreground">{selectedProject.description}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Domain</p>
-                    <p className="text-foreground font-mono">{selectedProject.domain}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Vault Balance */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Vault Balance</CardTitle>
               </CardHeader>
               <CardContent>
                 {projectVaultData.loading ? (
@@ -143,6 +129,10 @@ const Vault: React.FC = () => {
                           {fmtFiat(projectVaultData.walletBalance && projectVaultData.xlmFiatRate ? projectVaultData.walletBalance * projectVaultData.xlmFiatRate : null)}
                         </p>
                       </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground">Project: {selectedProject.domain}</p>
+                        <p className="text-xs text-muted-foreground">{selectedProject.description}</p>
+                      </div>  
                     </div>
                   </div>
                 )}
@@ -158,7 +148,7 @@ const Vault: React.FC = () => {
             )}
 
             {/* Access Required Message */}
-            {selectedProject && isConnected && !projectVaultData.isMaintainer && !projectVaultData.loading && (
+            {selectedProject && isConnected && !isMaintainer && !projectVaultData.loading && (
               <Card>
                 <CardContent className="py-8 text-center">
                   <h3 className="text-lg font-semibold text-muted-foreground mb-2">
