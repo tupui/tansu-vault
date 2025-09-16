@@ -87,11 +87,8 @@ export async function getTansuProject(identifier: string, network: 'mainnet' | '
 
 export async function resolveSorobanDomain(domain: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<string | null> {
   try {
-    const { createDomainService } = await import('./soroban-contract-services');
-    const domainService = createDomainService(network);
-    
-    const address = await domainService.resolve(domain);
-    return address;
+    const { resolveSorobanDomain: resolveDomainUtil } = await import('./soroban-domains');
+    return await resolveDomainUtil(domain, network);
   } catch (error) {
     console.error('Failed to resolve Soroban domain:', error);
     return null;

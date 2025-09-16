@@ -1,75 +1,45 @@
-import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { Contract, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { getNetworkConfig } from './appConfig';
-import { isValidDomain, isValidPublicKey } from './validation';
-
-// Simple domain resolution without external SDK
-let rpcServer: SorobanServer | null = null;
-let currentNetwork: string | null = null;
-
+import { isValidDomain } from './validation';
 /**
- * Initialize the RPC server for the given network
+ * Resolve a Soroban domain to a Stellar address using SorobanDomainsSDK
  */
-export const initializeDomainRPC = (network: string): void => {
-  if (rpcServer && currentNetwork === network) {
-    return; // Already initialized for this network
-  }
-
-  const config = getNetworkConfig(network);
-  rpcServer = new SorobanServer(config.sorobanRpcUrl);
-  currentNetwork = network;
-};
-
-/**
- * Resolve a Soroban domain to a Stellar address
- */
-export const resolveSorobanDomain = async (domain: string, network: string): Promise<string | null> => {
+export const resolveSorobanDomain = async (
+  domain: string,
+  network: 'mainnet' | 'testnet'
+): Promise<string | null> => {
   try {
-    if (!isValidDomain(domain)) {
-      throw new Error('Invalid domain format');
-    }
+    if (!domain || !isValidDomain(domain)) return null;
 
-    const networkConfig = getNetworkConfig(network);
-    if (!networkConfig.sorobanDomainContract) {
-      throw new Error('Domain resolution not supported on this network');
-    }
+    const normalized = domain.trim().toLowerCase();
+    const cfg = getNetworkConfig(network);
 
-    const server = new SorobanServer(networkConfig.sorobanRpcUrl);
-    const contract = new Contract(networkConfig.sorobanDomainContract);
+    // Dynamic imports to keep bundle small
+    const StellarSDK: any = await import('@stellar/stellar-sdk');
+    const { SorobanDomainsSDK }: any = await import('@creit.tech/sorobandomains-sdk');
 
-    // Call the domain contract to resolve the domain
-    const op = contract.call('resolve', nativeToScVal(domain, { type: 'string' }));
-    const sim: any = await server.simulateTransaction(op as any);
+    const rpcServer = new StellarSDK.rpc.Server(cfg.sorobanRpcUrl);
 
-    if ('error' in sim) {
-      throw new Error(`Domain resolution failed: ${sim.error}`);
-    }
+    const sdk = new SorobanDomainsSDK({
+      stellarSDK: StellarSDK,
+      rpc: rpcServer,
+      network: cfg.networkPassphrase,
+      vaultsContractId: cfg.sorobanDomainContract,
+      defaultFee: '100',
+      defaultTimeout: 30,
+      simulationAccount: 'GDMTVHLWJTHSUDMZVVMXXH6VJHA2ZV3HNG5LYNAZ6RTWB7GISM6PGTUV'
+    });
 
-    const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) {
-      return null;
-    }
+    const res = await sdk.searchDomain({ domain: normalized });
+    const v = (res && (res.value ?? res)) as any;
 
-    const result = scValToNative(retval);
-    
-    // Handle different response formats
-    if (typeof result === 'string' && isValidPublicKey(result)) {
-      return result;
-    }
-    
-    if (typeof result === 'object' && result !== null) {
-      // Check for common address field names
-      const addressFields = ['address', 'stellar_address', 'public_key', 'account'];
-      for (const field of addressFields) {
-        if (field in result && typeof result[field] === 'string' && isValidPublicKey(result[field])) {
-          return result[field];
-        }
-      }
+    if (v && typeof v.owner === 'string') {
+      const resolved = v.address || v.owner;
+      return typeof resolved === 'string' ? resolved : null;
     }
 
     return null;
   } catch (error) {
-    console.error('Domain resolution error:', error);
+    console.error('Soroban domain resolution error:', error);
     return null;
   }
 };
@@ -83,14 +53,7 @@ export const isDomainAvailable = async (domain: string, network: string): Promis
   }
 
   try {
-    initializeDomainRPC(network);
-    
-    if (!rpcServer) {
-      return false;
-    }
-
-    // For now, assume all domains are available
-    // This would require calling the actual Soroban domain contract
+    // TODO: Implement actual availability check via SDK if needed
     return true;
   } catch (error) {
     console.warn(`Failed to check domain availability for ${domain}:`, error);
@@ -107,13 +70,7 @@ export const getDomainInfo = async (domain: string, network: string) => {
   }
 
   try {
-    initializeDomainRPC(network);
-    
-    if (!rpcServer) {
-      return null;
-    }
-
-    // For now, return null as this needs proper contract integration
+    // Not implemented yet
     return null;
   } catch (error) {
     console.warn(`Failed to get domain info for ${domain}:`, error);
