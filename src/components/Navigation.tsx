@@ -9,6 +9,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { createProjectService } from '@/lib/soroban-contract-services';
+import tansuLogo from '@/assets/tansu-logo.svg';
 
 export const Navigation = () => {
   const location = useLocation();
@@ -49,11 +50,11 @@ export const Navigation = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border glass backdrop-blur-xl">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 hover-lift">
-          <div className="p-2 rounded-lg bg-primary">
-            <Vault className="h-6 w-6 text-primary-foreground" />
+        <Link to="/" className="flex items-center gap-3 hover-lift">
+          <div className="w-8 h-8 rounded-lg overflow-hidden">
+            <img src={tansuLogo} alt="Tansu Logo" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-xl font-bold text-primary">
+          <h1 className="text-xl font-bold text-foreground">
             Tansu Vault
           </h1>
         </Link>
