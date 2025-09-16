@@ -17,6 +17,7 @@ const TREZOR_ID = 'trezor';
 // Wallet Context Interface
 interface WalletContextType {
   address: string | null;
+  walletId: string | null;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -43,6 +44,7 @@ export const useWallet = (): WalletContextType => {
 // useWalletState Hook Implementation
 export const useWalletState = (): WalletContextType => {
   const [address, setAddress] = useState<string | null>(null);
+  const [walletId, setWalletId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
@@ -72,6 +74,7 @@ export const useWalletState = (): WalletContextType => {
           
           // Restore the address without triggering a new connection
           setAddress(savedAddress);
+          setWalletId(savedWalletId);
           setIsDomainConnected(!!savedDomain);
           setConnectedDomain(savedDomain);
           await refreshBalances(savedAddress);
@@ -109,6 +112,7 @@ export const useWalletState = (): WalletContextType => {
       const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
       const connectedAddress = await connectWallet(walletId, targetNetwork);
       setAddress(connectedAddress);
+      setWalletId(walletId);
       setIsDomainConnected(false);
       setConnectedDomain(null);
       localStorage.setItem('tansu_wallet_address', connectedAddress);
@@ -131,6 +135,7 @@ export const useWalletState = (): WalletContextType => {
       const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
       const connectedAddress = await connectWallet(walletId, targetNetwork);
       setAddress(connectedAddress);
+      setWalletId(walletId);
       setIsDomainConnected(true);
       setConnectedDomain(domain);
       localStorage.setItem('tansu_wallet_address', connectedAddress);
@@ -147,6 +152,7 @@ export const useWalletState = (): WalletContextType => {
 
   const disconnect = () => {
     setAddress(null);
+    setWalletId(null);
     setBalances([]);
     setError(null);
     setIsDomainConnected(false);
@@ -171,6 +177,7 @@ export const useWalletState = (): WalletContextType => {
 
   return {
     address,
+    walletId,
     isConnected,
     isLoading,
     error,

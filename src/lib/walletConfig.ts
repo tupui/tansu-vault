@@ -27,7 +27,7 @@ export const WALLET_CONFIGS: Record<string, WalletConfig> = {
     name: 'xBull Wallet',
     description: 'Multi-platform wallet (Mobile, Web, Extension)',
     type: 'extension',
-    detectAvailability: () => typeof window !== 'undefined' && (!!(window as any).xBullWalletConnect || !!(window as any).xBull),
+    detectAvailability: () => true, // Always available via WalletConnect/QR
     installUrl: 'https://xbull.app/'
   },
   ledger: {
@@ -125,15 +125,7 @@ export const getWalletsByType = (type: WalletConfig['type']): WalletConfig[] => 
  */
 export const getAvailableWallets = (): WalletConfig[] => {
   return Object.values(WALLET_CONFIGS).filter(wallet => {
-    // Only show wallets that are actually supported and detected
-    const detected = !wallet.detectAvailability || wallet.detectAvailability();
-    
-    // For xBull, check if it's actually installed properly
-    if (wallet.id === 'xbull') {
-      return detected && typeof window !== 'undefined' && (window as any).xBullWalletConnect;
-    }
-    
-    return detected;
+    return !wallet.detectAvailability || wallet.detectAvailability();
   });
 };
 

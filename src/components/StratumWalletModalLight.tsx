@@ -307,20 +307,26 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
           {primaryWallets.map((wallet) => {
             const isAvailable = wallet.detectAvailability?.() ?? true;
             const isConnecting = connecting === wallet.id;
+            const hasExtension = wallet.id === 'xbull' ? 
+              (typeof window !== 'undefined' && !!(window as any).xBull) : isAvailable;
 
             return (
               <button
                 key={wallet.id}
-                className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group"
                 onClick={() => handleWalletConnect(wallet.id, wallet.name)}
-                disabled={!isAvailable || isLoading || isConnecting}
+                disabled={isLoading || isConnecting}
               >
                 <div className="flex items-center gap-3">
                   {getWalletIcon(wallet.id)}
                   <div className="text-left">
                     <div className="font-medium">{wallet.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {!isAvailable ? 'Not detected' : 'Available'}
+                      {wallet.id === 'xbull' && !hasExtension
+                        ? 'Will use QR code'
+                        : hasExtension 
+                        ? 'Available' 
+                        : 'Not detected'}
                     </div>
                   </div>
                 </div>
@@ -352,9 +358,9 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
                   return (
                     <button
                       key={wallet.id}
-                      className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group"
                       onClick={() => handleWalletConnect(wallet.id, wallet.name)}
-                      disabled={!isAvailable || isLoading || isConnecting}
+                      disabled={isLoading || isConnecting}
                     >
                       <div className="flex items-center gap-3">
                         {getWalletIcon(wallet.id)}

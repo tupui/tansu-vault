@@ -4,7 +4,10 @@ import {
   allowAllModules,
   FREIGHTER_ID,
   LOBSTR_ID,
-  RABET_ID
+  RABET_ID,
+  XBULL_ID,
+  ALBEDO_ID,
+  HANA_ID
 } from '@creit.tech/stellar-wallets-kit';
 import {
   Horizon,
@@ -110,12 +113,43 @@ export const getWalletKit = () => {
   return walletKit;
 };
 
+// Map UI wallet IDs to official wallet kit constants
+const getOfficialWalletId = (walletId: string): string => {
+  const idMap: Record<string, string> = {
+    'freighter': FREIGHTER_ID,
+    'xbull': XBULL_ID,
+    'lobstr': LOBSTR_ID,
+    'rabet': RABET_ID,
+    'albedo': ALBEDO_ID,
+    'hana': HANA_ID,
+    'walletconnect': 'walletconnect',
+    'ledger': 'ledger',
+  };
+  return idMap[walletId] || walletId;
+};
+
 // Wallet connection utilities
 export const connectWallet = async (walletId: string, network: NetworkType = currentNetwork) => {
   const kit = initWalletKit(network);
-  await kit.setWallet(walletId);
-  const { address } = await kit.getAddress();
-  return address;
+  const officialWalletId = getOfficialWalletId(walletId);
+  
+  try {
+    // Use openModal for proper wallet connection flow (required for QR codes, etc.)
+    await kit.openModal({
+      onWalletSelected: async (option) => {
+        await kit.setWallet(option.id);
+      }
+    });
+    
+    const { address } = await kit.getAddress();
+    return address;
+  } catch (error: any) {
+    // Handle user cancellation vs provider errors
+    if (error?.message?.includes('User rejected') || error?.message?.includes('cancelled')) {
+      throw new Error('Connection cancelled by user');
+    }
+    throw error;
+  }
 };
 
 export const getWalletAddress = async () => {

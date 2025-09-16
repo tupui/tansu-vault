@@ -12,7 +12,7 @@ import { createProjectService } from '@/lib/soroban-contract-services';
 
 export const Navigation = () => {
   const location = useLocation();
-  const { isConnected, address, disconnect } = useWallet();
+  const { isConnected, address, isLoading, disconnect } = useWallet();
   const { network } = useNetwork();
   const { getCurrentCurrency } = useFiatCurrency();
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -128,8 +128,8 @@ export const Navigation = () => {
               </Button>
             </div>
           ) : (
-            <Button onClick={() => setShowWalletModal(true)}>
-              Connect Wallet
+            <Button onClick={() => setShowWalletModal(true)} disabled={isLoading}>
+              {isLoading ? 'Connecting...' : 'Connect Wallet'}
             </Button>
           )}
         </div>
