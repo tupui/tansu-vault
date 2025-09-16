@@ -93,7 +93,7 @@ export const useProjectVault = (
     const loadFiatRate = async () => {
       try {
         const { getXlmRateWithFallback } = await import('@/lib/fx');
-        const rate = await getXlmRateWithFallback(quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+        const rate = await getXlmRateWithFallback(quoteCurrency); // Always uses mainnet rates
         if (mounted) {
           setXlmFiatRate(rate);
         }
@@ -114,7 +114,7 @@ export const useProjectVault = (
       mounted = false;
       clearInterval(interval);
     };
-  }, [quoteCurrency, network]);
+  }, [quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
 
   return {
     project: selectedProject,

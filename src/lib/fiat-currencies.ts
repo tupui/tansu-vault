@@ -61,13 +61,13 @@ export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' 
 }
 
 /**
- * Get exchange rate for XLM to fiat currency (no hardcoded fallbacks)
+ * Get exchange rate for XLM to fiat currency (always uses mainnet for accurate rates)
  */
 export const getXlmFiatRate = async (
   fiatCurrency: string,
-  network: string = 'testnet'
+  network?: string
 ): Promise<number> => {
-  return await getAssetPrice('XLM', fiatCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+  return await getAssetPrice('XLM', fiatCurrency, 'mainnet'); // Always use mainnet for pricing
 };
 
 /**

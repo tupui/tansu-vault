@@ -279,22 +279,22 @@ const testnetEngine = new ReflectorPriceEngine('testnet');
 export const getPriceEngine = (network: 'mainnet' | 'testnet'): ReflectorPriceEngine =>
   network === 'mainnet' ? mainnetEngine : testnetEngine;
 
-// Convenience functions
+// Convenience functions (always use mainnet for accurate pricing)
 export const getAssetPrice = async (
   assetCode: string, 
   quote: string = 'USD', 
-  network: 'mainnet' | 'testnet' = 'testnet'
+  network: 'mainnet' | 'testnet' = 'mainnet' // Default to mainnet for pricing
 ): Promise<number> => {
-  const engine = getPriceEngine(network);
+  const engine = getPriceEngine('mainnet'); // Always use mainnet for pricing
   return engine.getPrice(assetCode, quote);
 };
 
 export const getAssetPrices = async (
   assets: string[], 
   quote: string = 'USD', 
-  network: 'mainnet' | 'testnet' = 'testnet'
+  network: 'mainnet' | 'testnet' = 'mainnet' // Default to mainnet for pricing
 ): Promise<Record<string, number>> => {
-  const engine = getPriceEngine(network);
+  const engine = getPriceEngine('mainnet'); // Always use mainnet for pricing
   return engine.getPrices(assets, quote);
 };
 

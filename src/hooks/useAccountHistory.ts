@@ -228,7 +228,7 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
     
     try {
       const { convertUsd } = await import('@/lib/fx');
-      return await convertUsd(usdAmount, targetCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+      return await convertUsd(usdAmount, targetCurrency); // Always uses mainnet rates
     } catch (error) {
       console.warn(`Failed to convert USD to ${targetCurrency}:`, error);
       return usdAmount; // Fallback to USD amount
@@ -287,7 +287,7 @@ export const useAccountHistory = (accountAddress: string | null): UseAccountHist
           if (!otherPriceCache.has(key)) {
             try {
               // Always get USD price first for consistency
-              const p = await getAssetPrice(tx.assetCode!, 'USD', network === 'mainnet' ? 'mainnet' : 'testnet');
+              const p = await getAssetPrice(tx.assetCode!, 'USD'); // Always uses mainnet
               otherPriceCache.set(key, p || 0);
             } catch {
               otherPriceCache.set(key, 0);

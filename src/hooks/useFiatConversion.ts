@@ -36,7 +36,7 @@ export const useFiatConversion = (): UseFiatConversionReturn => {
         throw new Error('Amount must be positive');
       }
 
-      const rate = await getAssetPrice('XLM', quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+      const rate = await getAssetPrice('XLM', quoteCurrency); // Always uses mainnet
       
       const fiatAmount = decimal.mul(rate).toNumber();
       
@@ -56,7 +56,7 @@ export const useFiatConversion = (): UseFiatConversionReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [quoteCurrency, network]);
+  }, [quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
 
   const formatFiatAmount = useCallback((amount: number, currency?: string): string => {
     const targetCurrency = currency || quoteCurrency;
@@ -79,10 +79,10 @@ export const useFiatConversion = (): UseFiatConversionReturn => {
     }
   }, [quoteCurrency, getCurrentCurrency]);
 
-  // Clear error when currency or network changes
+  // Clear error when currency changes
   useEffect(() => {
     setError(null);
-  }, [quoteCurrency, network]);
+  }, [quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
 
   return {
     convertXLMToFiat,
@@ -113,7 +113,7 @@ export const useAmountToFiat = (amount: string | number, assetCode: string = 'XL
 
       try {
         const decimal = new Decimal(amount);
-        const rate = await getAssetPrice(assetCode, quoteCurrency, network === 'mainnet' ? 'mainnet' : 'testnet');
+        const rate = await getAssetPrice(assetCode, quoteCurrency); // Always uses mainnet
         
         const fiatAmount = decimal.mul(rate).toNumber();
 
@@ -133,7 +133,7 @@ export const useAmountToFiat = (amount: string | number, assetCode: string = 'XL
     };
 
     convertAmount();
-  }, [amount, assetCode, quoteCurrency, network]);
+  }, [amount, assetCode, quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
 
   return { result, isLoading, error };
 };

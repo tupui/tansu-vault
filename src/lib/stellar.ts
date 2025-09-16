@@ -418,10 +418,10 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
   }
 };
 
-// Pricing utilities using Reflector Network
-export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD', network: 'mainnet' | 'testnet' = 'testnet'): Promise<number> => {
+// Pricing utilities using Reflector Network (always mainnet for accurate rates)
+export const fetchAssetPrice = async (assetCode: string, currency: string = 'USD', network?: 'mainnet' | 'testnet'): Promise<number> => {
   const { getAssetPrice } = await import('@/lib/reflector');
-  return await getAssetPrice(assetCode, currency, network);
+  return await getAssetPrice(assetCode, currency); // Always uses mainnet
 };
 
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
