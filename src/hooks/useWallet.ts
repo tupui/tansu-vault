@@ -211,6 +211,7 @@ export const useWalletState = (): WalletContextType => {
     connectedDomain,
     connect,
     connectViaDomain,
+    connectReadOnly,
     disconnect,
     refreshBalances,
   };

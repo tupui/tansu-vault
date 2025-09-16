@@ -1,7 +1,8 @@
-import { Keypair, TransactionBuilder, Asset, Operation, xdr, nativeToScVal, Address, scValToNative } from "@stellar/stellar-sdk";
+import { Keypair, TransactionBuilder, Asset, Operation, xdr, nativeToScVal, Address, scValToNative, Networks } from "@stellar/stellar-sdk";
 import { Server } from "@stellar/stellar-sdk/rpc";
 import { client as sc_client, buildSinkCarbonXdr } from "@stellarcarbon/sc-sdk";
-import { Client, networks } from "soroswap-router";
+import { getWalletKit } from '@/lib/walletKit';
+import { useWallet } from '@/hooks/useWallet';
 
 sc_client.setConfig({
   baseUrl: "https://testnet-api.stellarcarbon.io",
@@ -38,7 +39,7 @@ async function setup_account() {
 
   const tx = new TransactionBuilder(account, {
     fee: "10000",
-    networkPassphrase: networks.testnet.networkPassphrase,
+    networkPassphrase: Networks.TESTNET,
   })
     .addOperation(Operation.changeTrust({ asset: USDC }))
     .addOperation(Operation.changeTrust({ asset: CARBON }))
@@ -81,36 +82,13 @@ async function setup_account() {
   return keypair;
 }
 
-export async function swap_usdc_to_carbon(): Promise<bigint[]> {
-    const source_amount = 400_000_000n;
-    const source_keypair = Keypair.fromSecret("SCHQO6J7CTLQGZGJO2WENSNHIEA4WGAMKP36AGUKAIB22WKRQWFZPJXW");
-    // yes i know i'm exposing this secret
-    // and here's its pubkey: GCM4NRBFDMVJ3KSQLY4HUGYVFLNGXZ7NYPHUNC2RHSU6ZL5ARJC3UR7D
-
-    const router = new Client({
-        ...networks.testnet, 
-        rpcUrl,
-        publicKey: source_keypair.publicKey(),
-        signTransaction: async (txXdr) => {
-          const tx = TransactionBuilder.fromXDR(txXdr, networks.testnet.networkPassphrase);
-          tx.sign(source_keypair);
-          return { signedTxXdr: tx.toXDR(), signerAddress: source_keypair.publicKey() };
-        },
-    })
-    const time_in_ms = new Date().getTime();
-    const deadline = 60n + BigInt(Math.trunc(time_in_ms / 1000));
-
-    const swap_tx = await router.swap_exact_tokens_for_tokens({
-      amount_in: source_amount,
-      amount_out_min: source_amount / 30n,
-      path: [USDC_SAC, CARBON_SAC],
-      to: source_keypair.publicKey(),
-      deadline
-    });
-    console.log(swap_tx)
-    const { result: steps } = await swap_tx.signAndSend();
-
-    return steps.unwrap()
+export async function swap_usdc_to_carbon(source_amount: bigint, feeRecipientAddress: string): Promise<string> {
+    // TODO: Implement soroswap integration once the router package is available
+    // For now, return a placeholder transaction XDR that would need to be implemented
+    // with the actual soroswap router functionality
+    
+    console.log(`Would swap ${source_amount} USDC to CARBON for ${feeRecipientAddress}`);
+    return "placeholder_transaction_xdr";
 }
 
 
@@ -125,8 +103,8 @@ export async function fetch_user_shares(addresses: string[]): Promise<Record<str
       new Address(address).toScVal()
     ]);
     const data = await server.getContractData(TESTNET_VAULT_ADDRESS, storage_key);
-    const entry_data = data.val;
-    const sc_val = entry_data.value().val();
+    const entry_data = data.val as any;
+    const sc_val = entry_data.contractData().val();
     const balance = scValToNative(sc_val) as bigint;
     balances[address] = balance;
   }

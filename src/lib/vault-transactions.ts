@@ -78,8 +78,8 @@ export async function depositToVault(userAddress: string, amount: string): Promi
   
   // Get assembled transaction like Tansu does (client.commit, client.vote, etc.)
   const assembledTx = await client.deposit({
-    amounts_desired: [amountI128],
-    amounts_min: [amountI128], // Same as desired for no slippage
+    amounts_desired: [BigInt(amountI128)],
+    amounts_min: [BigInt(amountI128)], // Same as desired for no slippage
     from: userAddress,
     invest: true
   });
@@ -117,8 +117,8 @@ export async function withdrawFromVault(userAddress: string, xlmAmount: string, 
   
   // Get assembled transaction like Tansu does (client.commit, client.vote, etc.)
   const assembledTx = await client.withdraw({
-    withdraw_shares: sharesToBurn,
-    min_amounts_out: [minAmountOut],
+    withdraw_shares: BigInt(sharesToBurn),
+    min_amounts_out: [BigInt(minAmountOut)],
     from: userAddress
   });
 
@@ -203,11 +203,13 @@ export async function getVaultBalance(userAddress: string): Promise<string> {
       const resultWrapper = assembledTx.result;
       
       // The result might be wrapped in a Result type, handle both cases
-      let shares;
-      if (resultWrapper && resultWrapper.isOk && resultWrapper.isOk()) {
-        shares = resultWrapper.unwrap();
-      } else {
-        shares = resultWrapper;
+      let shares = 0;
+      if (resultWrapper !== null && resultWrapper !== undefined) {
+        if (typeof resultWrapper === 'object' && 'isOk' in resultWrapper) {
+          shares = Number((resultWrapper as any)!.unwrap());
+        } else {
+          shares = Number(resultWrapper);
+        }
       }
       
       // Convert from i128 to readable amount (shares)

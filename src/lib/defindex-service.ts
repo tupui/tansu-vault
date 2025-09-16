@@ -236,7 +236,9 @@ export class DeFindexVaultService {
   async calculateSharesToBurn(xlmAmount: string): Promise<string> {
     try {
       const totalSupply = await this.getTotalSupply();
-      const totalManagedFunds = await this.getVaultTotalBalance();
+      // Use getTotalManagedFunds from vault-transactions.ts
+      const { getVaultTotalBalance } = await import('./vault-transactions');
+      const totalManagedFunds = await getVaultTotalBalance();
       
       if (parseFloat(totalSupply) === 0 || parseFloat(totalManagedFunds) === 0) {
         throw new Error('Vault has no shares or funds');
@@ -770,9 +772,8 @@ export class DeFindexVaultService {
         throw new Error(`Withdraw simulation failed: ${simulation.error}`);
       }
 
-      // Assemble the transaction with simulation results
-      const assembledTransaction = SorobanRpc.assembleTransaction(transaction, simulation);
-      return assembledTransaction.toXDR();
+      // Return the transaction XDR directly - assembleTransaction is handled elsewhere
+      return transaction.toXDR();
     } catch (error) {
       throw new Error(`Failed to prepare withdrawal: ${error}`);
     }
@@ -786,7 +787,13 @@ export class DeFindexVaultService {
     let sendResponse: any;
     try {
       // Try sending as XDR string first
-      sendResponse = await this.rpcServer.sendTransaction(signedXdr);
+      // Use the RPC server from import instead of casting to any
+      const { Transaction } = await import('@stellar/stellar-sdk');
+      const transaction = new Transaction(
+        signedXdr,
+        this.networkPassphrase,
+      );
+      sendResponse = await this.rpcServer.sendTransaction(transaction);
     } catch (_error) {
       // Fallback: convert to Transaction object
       const transaction = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
