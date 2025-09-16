@@ -4,6 +4,8 @@ import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProjectSearch } from '@/components/ProjectSearch';
 import { VaultOperations } from '@/components/VaultOperations';
+import { VaultAnalytics } from '@/components/VaultAnalytics';
+import { CO2OffsetTracker } from '@/components/CO2OffsetTracker';
 import { TransactionHistoryPanel } from '@/components/history/TransactionHistoryPanel';
 import { useWallet } from '@/hooks/useWallet';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
@@ -11,6 +13,7 @@ import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { useProjectVault } from '@/hooks/useProjectVault';
 import { TansuProject } from '@/lib/tansu-contracts';
 import { fetchTansuMetadata, extractLogoUrl } from '@/lib/ipfs-utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 
 const Vault: React.FC = () => {
@@ -167,54 +170,78 @@ const Vault: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Vault Operations - Only for maintainers */}
-            {canManageVault && (
-              <VaultOperations 
-                userBalance={(projectVaultData.walletBalance || 0).toString()}
-                vaultBalance={(projectVaultData.vaultBalance || 0).toString()}
-                canManageVault={canManageVault}
-                projectWalletAddress={projectWalletAddress}
-              />
-            )}
+            {/* Vault Management Tabs */}
+            <Tabs defaultValue="operations" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="operations">Operations</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="co2">CO₂ Offset</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
 
-            {/* Access Required Message */}
-            {selectedProject && isConnected && !canManageVault && !projectVaultData.loading && (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                    {!isMaintainer ? 'Access Required' : 'Domain Connection Required'}
-                  </h3>
-                   <p className="text-muted-foreground">
-                     {!isMaintainer 
-                       ? 'You need to be a maintainer of this project to manage its vault.'
-                       : address !== projectWalletAddress
-                         ? `Connect your wallet via the project's Soroban domain${selectedProject.domain ? ` (${selectedProject.domain})` : ''} or use the project wallet address directly.`
-                         : 'Domain connection is required to manage the vault.'
-                     }
-                   </p>
-                </CardContent>
-              </Card>
-            )}
+              {/* Operations Tab */}
+              <TabsContent value="operations" className="space-y-6">
+                {/* Vault Operations - Only for maintainers */}
+                {canManageVault && (
+                  <VaultOperations 
+                    userBalance={(projectVaultData.walletBalance || 0).toString()}
+                    vaultBalance={(projectVaultData.vaultBalance || 0).toString()}
+                    canManageVault={canManageVault}
+                    projectWalletAddress={projectWalletAddress}
+                  />
+                )}
 
-            {/* Connect Wallet Message */}
-            {selectedProject && !isConnected && (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Connect Your Wallet
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Connect your wallet to check if you have access to manage this project's vault.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+                {/* Access Required Message */}
+                {selectedProject && isConnected && !canManageVault && !projectVaultData.loading && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                        {!isMaintainer ? 'Access Required' : 'Domain Connection Required'}
+                      </h3>
+                       <p className="text-muted-foreground">
+                         {!isMaintainer 
+                           ? 'You need to be a maintainer of this project to manage its vault.'
+                           : address !== projectWalletAddress
+                             ? `Connect your wallet via the project's Soroban domain${selectedProject.domain ? ` (${selectedProject.domain})` : ''} or use the project wallet address directly.`
+                             : 'Domain connection is required to manage the vault.'
+                         }
+                       </p>
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Recent Activity - Transaction History */}
-            <TransactionHistoryPanel 
-              accountAddress={projectWalletAddress}
-              className="mt-6"
-            />
+                {/* Connect Wallet Message */}
+                {selectedProject && !isConnected && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        Connect Your Wallet
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Connect your wallet to check if you have access to manage this project's vault.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics">
+                <VaultAnalytics />
+              </TabsContent>
+
+              {/* CO2 Offset Tab */}
+              <TabsContent value="co2">
+                <CO2OffsetTracker />
+              </TabsContent>
+
+              {/* History Tab */}
+              <TabsContent value="history">
+                <TransactionHistoryPanel 
+                  accountAddress={projectWalletAddress}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </div>

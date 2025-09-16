@@ -259,69 +259,18 @@ const buildContractTransaction = async (
 
 export const depositToVault = async (userAddress: string, amount: string): Promise<string> => {
   try {
-    const { getNetworkConfig } = await import('./appConfig');
-    const config = getNetworkConfig('testnet');
-    const vaultContractId = config.vaultContract;
+    const { getDeFindexService } = await import('./defindex-service');
+    const defindexService = getDeFindexService('testnet');
     
-    if (!vaultContractId) {
-      throw new Error('Vault contract address not configured');
-    }
-
-    // Convert amount to i128 with 7 decimals (XLM standard)
-    const amountToI128 = (amt: string, decimals = 7): string => {
-      const num = parseFloat(amt);
-      const scaled = BigInt(Math.round(num * Math.pow(10, decimals)));
-      return scaled.toString();
-    };
-
-    const amountI128 = amountToI128(amount);
+    // Prepare the deposit transaction
+    const unsignedXdr = await defindexService.prepareDeposit(userAddress, amount, true);
     
-    // DeFindex deposit function signature:
-    // fn deposit(e: Env, amounts_desired: Vec<i128>, amounts_min: Vec<i128>, from: Address, invest: bool)
-    const amountsDesired = [nativeToScVal(amountI128, { type: 'i128' })];
-    const amountsMin = [nativeToScVal(amountI128, { type: 'i128' })]; // Same as desired for slippage protection
-    const fromAddress = nativeToScVal(userAddress, { type: 'address' });
-    const invest = nativeToScVal(true, { type: 'bool' }); // Auto-invest into strategies
-
-    const transaction = await buildContractTransaction(
-      userAddress,
-      vaultContractId,
-      'deposit',
-      [
-        nativeToScVal(amountsDesired, { type: 'vec' }),
-        nativeToScVal(amountsMin, { type: 'vec' }),
-        fromAddress,
-        invest
-      ]
-    );
-
-    // Soroban flow: simulate -> prepare -> sign -> send -> poll
-    const sim = await rpcServer.simulateTransaction(transaction);
-    if (Api.isSimulationError(sim)) {
-      throw new Error(`Simulation failed: ${sim.error}`);
-    }
-    const prepared = await rpcServer.prepareTransaction(transaction);
-
-    const signedXdr = await signTransaction(prepared.toXDR());
-    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-
-    const send = await rpcServer.sendTransaction(signedTx);
-    if (send.errorResult) {
-      throw new Error('Transaction submission failed');
-    }
-
-    const hash = send.hash;
-    for (let i = 0; i < 10; i++) {
-      const res = await rpcServer.getTransaction(hash);
-      if (res.status === 'SUCCESS') {
-        return hash;
-      }
-      if (res.status === 'FAILED') {
-        throw new Error('Transaction failed on chain');
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    throw new Error('Transaction timed out');
+    // Sign the transaction using the wallet
+    const signedXdr = await signTransaction(unsignedXdr);
+    
+    // Submit the signed transaction
+    const hash = await defindexService.submitTransaction(signedXdr);
+    return hash;
   } catch (error) {
     throw new Error(`Deposit failed: ${error}`);
   }
@@ -329,67 +278,18 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
 
 export const withdrawFromVault = async (userAddress: string, amount: string, slippagePercent: number = 5): Promise<string> => {
   try {
-    const { getNetworkConfig } = await import('./appConfig');
-    const config = getNetworkConfig('testnet');
-    const vaultContractId = config.vaultContract;
+    const { getDeFindexService } = await import('./defindex-service');
+    const defindexService = getDeFindexService('testnet');
     
-    if (!vaultContractId) {
-      throw new Error('Vault contract address not configured');
-    }
-
-    // Convert amount to i128 with 7 decimals (XLM standard)
-    const amountToI128 = (amt: string, decimals = 7): string => {
-      const num = parseFloat(amt);
-      const scaled = BigInt(Math.round(num * Math.pow(10, decimals)));
-      return scaled.toString();
-    };
-
-    const amountI128 = amountToI128(amount);
+    // Prepare the withdrawal transaction
+    const unsignedXdr = await defindexService.prepareWithdraw(userAddress, amount, slippagePercent);
     
-    // DeFindex withdraw function signature:
-    // fn withdraw(e: Env, amounts: Vec<i128>, to: Address, max_slippage: i128)
-    const amounts = [nativeToScVal(amountI128, { type: 'i128' })];
-    const toAddress = nativeToScVal(userAddress, { type: 'address' });
-    const maxSlippage = nativeToScVal((slippagePercent * 100).toString(), { type: 'i128' }); // Convert % to basis points (bps)
-
-    const transaction = await buildContractTransaction(
-      userAddress,
-      vaultContractId,
-      'withdraw',
-      [
-        nativeToScVal(amounts, { type: 'vec' }),
-        toAddress,
-        maxSlippage
-      ]
-    );
-
-    // Soroban flow: simulate -> prepare -> sign -> send -> poll
-    const sim = await rpcServer.simulateTransaction(transaction);
-    if (Api.isSimulationError(sim)) {
-      throw new Error(`Simulation failed: ${sim.error}`);
-    }
-    const prepared = await rpcServer.prepareTransaction(transaction);
-
-    const signedXdr = await signTransaction(prepared.toXDR());
-    const signedTx = TransactionBuilder.fromXDR(signedXdr, NETWORK_DETAILS[currentNetwork].network);
-
-    const send = await rpcServer.sendTransaction(signedTx);
-    if (send.errorResult) {
-      throw new Error('Transaction submission failed');
-    }
-
-    const hash = send.hash;
-    for (let i = 0; i < 10; i++) {
-      const res = await rpcServer.getTransaction(hash);
-      if (res.status === 'SUCCESS') {
-        return hash;
-      }
-      if (res.status === 'FAILED') {
-        throw new Error('Transaction failed on chain');
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    throw new Error('Transaction timed out');
+    // Sign the transaction using the wallet
+    const signedXdr = await signTransaction(unsignedXdr);
+    
+    // Submit the signed transaction
+    const hash = await defindexService.submitTransaction(signedXdr);
+    return hash;
   } catch (error) {
     throw new Error(`Withdrawal failed: ${error}`);
   }
@@ -397,40 +297,11 @@ export const withdrawFromVault = async (userAddress: string, amount: string, sli
 
 export const getVaultTotalBalance = async (): Promise<string> => {
   try {
-    const { getNetworkConfig } = await import('./appConfig');
-    const config = getNetworkConfig('testnet');
-    const vaultContractId = config.vaultContract;
+    const { getDeFindexService } = await import('./defindex-service');
+    const defindexService = getDeFindexService('testnet');
     
-    if (!vaultContractId) {
-      return "0";
-    }
-    
-    const contract = new Contract(vaultContractId);
-    
-    // Need to create proper transaction, not just operation
-    const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const op = contract.call('total_managed_funds'); // DeFindex vault function for total assets under management
-    
-    const transaction = new TransactionBuilder(sourceAccount, {
-      fee: '100',
-      networkPassphrase: NETWORK_DETAILS[currentNetwork].network,
-    })
-    .addOperation(op)
-    .setTimeout(30)
-    .build();
-    
-    const sim: any = await rpcServer.simulateTransaction(transaction);
-    
-    if ('error' in sim) {
-      return "0";
-    }
-
-    const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) return "0";
-
-    const result = scValToNative(retval);
-    const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
-    return balance.toString();
+    const vaultInfo = await defindexService.getVaultInfo();
+    return vaultInfo.totalManagedFunds;
   } catch (error) {
     return "0";
   }
@@ -438,40 +309,11 @@ export const getVaultTotalBalance = async (): Promise<string> => {
 
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
   try {
-    const { getNetworkConfig } = await import('./appConfig');
-    const config = getNetworkConfig('testnet');
-    const vaultContractId = config.vaultContract;
+    const { getDeFindexService } = await import('./defindex-service');
+    const defindexService = getDeFindexService('testnet');
     
-    if (!vaultContractId) {
-      return "0";
-    }
-    
-    const contract = new Contract(vaultContractId);
-    
-    // Need to create proper transaction, not just operation
-    const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const op = contract.call('balance', nativeToScVal(userAddress, { type: 'address' }));
-    
-    const transaction = new TransactionBuilder(sourceAccount, {
-      fee: '100',
-      networkPassphrase: NETWORK_DETAILS[currentNetwork].network,
-    })
-    .addOperation(op)
-    .setTimeout(30)
-    .build();
-    
-    const sim: any = await rpcServer.simulateTransaction(transaction);
-    
-    if ('error' in sim) {
-      return "0";
-    }
-
-    const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) return "0";
-
-    const result = scValToNative(retval);
-    const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
-    return balance.toString();
+    const balance = await defindexService.getUserBalance(userAddress);
+    return balance.underlyingBalance;
   } catch (error) {
     return "0";
   }
