@@ -1,177 +1,181 @@
-import { Contract, xdr, nativeToScVal, scValToNative, TransactionBuilder, Account } from '@stellar/stellar-sdk';
-import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
-import { REFLECTOR_ORACLE_CONTRACTS, getNetworkConfig } from '../appConfig';
+import { Contract, rpc, Networks, TransactionBuilder } from '@stellar/stellar-sdk';
+import { buildAssetScVal, type Asset } from './xdr-helper';
 
-interface CachedRate {
-  rate: number;
-  timestamp: number;
+export interface OracleConfig {
+  contract: string;
+  base: string;
+  decimals: number;
 }
 
-export class ReflectorOracleClient {
-  private server: SorobanServer;
-  private contracts: { external_cex: string; pubnet: string; forex: string };
-  private cache = new Map<string, CachedRate>();
-  private readonly CACHE_DURATION = 60_000; // 1 minute
-  private readonly RATE_LIMIT_DURATION = 2_000; // 2 seconds
-  private lastRequestTime = 0;
-  private networkPassphrase: string;
+// Adaptive rate limiter: allow up to 50 RPC calls per 10s with burst, only wait when exceeded
+const WINDOW_MS = 10_000;
+const BURST_LIMIT = 50;
+let __rpcTimestamps: number[] = [];
+let __rpcQueue: Promise<any> = Promise.resolve();
+const __sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-  constructor(network: 'mainnet' | 'testnet') {
-    const config = getNetworkConfig(network);
-    this.server = new SorobanServer(config.sorobanRpcUrl);
-    this.contracts = REFLECTOR_ORACLE_CONTRACTS[network];
-    this.networkPassphrase = config.networkPassphrase;
+function __cleanupTimestamps() {
+  const now = Date.now();
+  __rpcTimestamps = __rpcTimestamps.filter((t) => now - t < WINDOW_MS);
+}
+
+async function __acquireToken() {
+  __cleanupTimestamps();
+  const now = Date.now();
+  if (__rpcTimestamps.length < BURST_LIMIT) {
+    __rpcTimestamps.push(now);
+    return;
   }
-
-  private getCacheKey(base: string, quote: string) {
-    return `${base}_${quote}`;
+  const oldest = __rpcTimestamps[0];
+  const wait = Math.max(0, WINDOW_MS - (now - oldest));
+  if (wait > 0) {
+    // Only sleep when we exceed the burst limit
+    await __sleep(wait);
   }
+  __cleanupTimestamps();
+  __rpcTimestamps.push(Date.now());
+}
 
-  private getFromCache(base: string, quote: string): number | null {
-    const key = this.getCacheKey(base, quote);
-    const cached = this.cache.get(key);
-    if (!cached) return null;
-    if (Date.now() - cached.timestamp > this.CACHE_DURATION) {
-      this.cache.delete(key);
-      return null;
-    }
-    return cached.rate;
-  }
-
-  private setCache(base: string, quote: string, rate: number) {
-    const key = this.getCacheKey(base, quote);
-    this.cache.set(key, { rate, timestamp: Date.now() });
-  }
-
-  private getContractAddress(source: 'external_cex' | 'pubnet' | 'forex') {
-    return this.contracts[source];
-  }
-
-  private async rateLimit() {
-    const now = Date.now();
-    const delta = now - this.lastRequestTime;
-    if (delta < this.RATE_LIMIT_DURATION) {
-      await new Promise((r) => setTimeout(r, this.RATE_LIMIT_DURATION - delta));
-    }
-    this.lastRequestTime = Date.now();
-  }
-
-  private parseOracleResult(result: xdr.ScVal): number {
-    const native = scValToNative(result);
-    const asNumber = typeof native === 'number' ? native : typeof native === 'string' ? parseFloat(native) : NaN;
-    if (!isFinite(asNumber)) {
-      throw new Error('Invalid oracle result');
-    }
-    return asNumber;
-  }
-
-  private async lastPrice(base: string, quote: string, source: 'external_cex' | 'pubnet' | 'forex'): Promise<number> {
-    await this.rateLimit();
-
-    const contract = new Contract(this.getContractAddress(source));
-    const op = contract.call(
-      'lastprice',
-      nativeToScVal(base, { type: 'string' }),
-      nativeToScVal(quote, { type: 'string' })
-    );
-
-    const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const tx = new TransactionBuilder(sourceAcct, {
-      fee: '100',
-      networkPassphrase: this.networkPassphrase,
-    })
-      .addOperation(op)
-      .setTimeout(30)
-      .build();
-
-    const sim: any = await this.server.simulateTransaction(tx);
-    if ('error' in sim) {
-      throw new Error(`Oracle simulation error: ${sim.error}`);
-    }
-
-    const retval = sim.result?.retval as xdr.ScVal | undefined;
-    if (!retval) throw new Error('Empty oracle response');
-
-    return this.parseOracleResult(retval);
-  }
-
-  // FX via FOREX oracle: USD -> currency
-  async getFxRate(currency: string): Promise<number> {
-    const cached = this.getFromCache('USD', currency);
-    if (cached !== null) return cached;
-    const rate = await this.lastPrice('USD', currency, 'forex');
-    this.setCache('USD', currency, rate);
-    return rate;
-  }
-
-  async getAssetPrice(assetCode: string, currency: string = 'USD'): Promise<number> {
-    const cached = this.getFromCache(assetCode, currency);
-    if (cached !== null) return cached;
-
-    if (currency === 'USD') {
-      // Try EXTERNAL/CEX first, then fall back to PUBNET
-      try {
-        const price = await this.lastPrice(assetCode, 'USD', 'external_cex');
-        this.setCache(assetCode, 'USD', price);
-        return price;
-      } catch (_e) {
-        const price = await this.lastPrice(assetCode, 'USD', 'pubnet');
-        this.setCache(assetCode, 'USD', price);
-        return price;
-      }
-    }
-
-    // Non-USD currency: get USD price, then apply FX
-    const usdPrice = await this.getAssetPrice(assetCode, 'USD');
-    const fx = await this.getFxRate(currency);
-    const result = usdPrice * fx;
-    this.setCache(assetCode, currency, result);
+function __runLimited<T>(fn: () => Promise<T>): Promise<T> {
+  const task = __rpcQueue.then(async () => {
+    await __acquireToken();
+    const result = await fn();
     return result;
+  });
+  // keep the chain, but don't block on previous errors
+  __rpcQueue = task.then(() => undefined).catch(() => undefined);
+  return task;
+}
+
+export class OracleClient {
+  private contract: Contract;
+  private rpcServer: rpc.Server;
+  private contractId: string;
+
+  // Global in-memory memoization across instances to dedupe identical requests
+  private static inflightAssets = new Map<string, Promise<string[]>>();
+  private static inflightLastPrice = new Map<string, Promise<number>>();
+  private static cacheAssets = new Map<string, { data: string[]; ts: number }>();
+  private static cacheLastPrice = new Map<string, { data: number; ts: number }>();
+  private static ASSETS_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+  private static PRICE_TTL_MS = 60 * 1000; // 60s
+
+  constructor(contractId: string, rpcUrl: string = 'https://mainnet.sorobanrpc.com') {
+    this.contractId = contractId;
+    this.contract = new Contract(contractId);
+    this.rpcServer = new rpc.Server(rpcUrl);
   }
 
-  // Discovery of available fiat currencies from FOREX oracle (with fallback)
-  async listSupportedCurrencies(): Promise<string[]> {
-    try {
-      const contract = new Contract(this.getContractAddress('forex'));
-      const op = contract.call('supported_currencies');
+  /**
+   * Get available assets from the oracle
+   */
+  async getAssets(): Promise<string[]> {
+    // Cache hit
+    const cached = OracleClient.cacheAssets.get(this.contractId);
+    if (cached && Date.now() - cached.ts < OracleClient.ASSETS_TTL_MS) {
+      return cached.data;
+    }
 
-      const sourceAcct = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-      const tx = new TransactionBuilder(sourceAcct, {
-        fee: '100',
-        networkPassphrase: this.networkPassphrase,
+    // Inflight dedupe
+    const existing = OracleClient.inflightAssets.get(this.contractId);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      const simulationAccount = 'GDMTVHLWJTHSUDMZVVMXXH6VJHA2ZV3HNG5LYNAZ6RTWB7GISM6PGTUV';
+      const account = await __runLimited(() => this.rpcServer.getAccount(simulationAccount));
+      const transaction = new TransactionBuilder(account, {
+        fee: '100000',
+        networkPassphrase: Networks.PUBLIC,
       })
-        .addOperation(op)
+        .addOperation(this.contract.call('assets'))
         .setTimeout(30)
         .build();
 
-      const sim: any = await this.server.simulateTransaction(tx);
-      if ('error' in sim) {
-        console.warn(`Oracle listSupportedCurrencies error: ${sim.error}`);
-        return this.getFallbackCurrencies();
+      const simResult = await __runLimited(() => this.rpcServer.simulateTransaction(transaction));
+      if ('error' in simResult) throw new Error(`Assets fetch failed: ${simResult.error}`);
+
+      if ('result' in simResult && simResult.result && 'retval' in simResult.result) {
+        const { scValToNative } = await import('@stellar/stellar-sdk');
+        const resultValue = scValToNative(simResult.result.retval);
+        const assetSymbols: string[] = [];
+        if (Array.isArray(resultValue)) {
+          for (const asset of resultValue) {
+            if (Array.isArray(asset) && asset.length === 2) {
+              const [type, value] = asset;
+              if (type === 'Other' && value) assetSymbols.push(String(value));
+              else if (type === 'Stellar' && value) assetSymbols.push(`stellar_${value}`);
+            }
+          }
+        }
+        OracleClient.cacheAssets.set(this.contractId, { data: assetSymbols, ts: Date.now() });
+        return assetSymbols;
       }
-      
-      const retval = sim.result?.retval as xdr.ScVal | undefined;
-      if (!retval) return this.getFallbackCurrencies();
-      
-      const native = scValToNative(retval);
-      const currencies = Array.isArray(native) ? native.map((c) => String(c)) : [];
-      
-      // Return fallback if oracle returns empty list
-      return currencies.length > 0 ? currencies : this.getFallbackCurrencies();
-    } catch (error) {
-      console.warn('Failed to fetch supported currencies from oracle:', error);
-      return this.getFallbackCurrencies();
+      return [];
+    })();
+
+    OracleClient.inflightAssets.set(this.contractId, promise);
+    try {
+      return await promise;
+    } finally {
+      OracleClient.inflightAssets.delete(this.contractId);
     }
   }
 
-  private getFallbackCurrencies(): string[] {
-    return ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
+  /**
+   * Get last price for an asset
+   */
+  async getLastPrice(asset: Asset): Promise<number> {
+    const key = `${this.contractId}:${asset.type}-${asset.code}`;
+
+    // Cache hit
+    const cached = OracleClient.cacheLastPrice.get(key);
+    if (cached && Date.now() - cached.ts < OracleClient.PRICE_TTL_MS) {
+      return cached.data;
+    }
+
+    // Inflight dedupe
+    const existing = OracleClient.inflightLastPrice.get(key);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      const simulationAccount = 'GDMTVHLWJTHSUDMZVVMXXH6VJHA2ZV3HNG5LYNAZ6RTWB7GISM6PGTUV';
+      const account = await __runLimited(() => this.rpcServer.getAccount(simulationAccount));
+      const assetParam = buildAssetScVal(asset);
+      const transaction = new TransactionBuilder(account, {
+        fee: '100000',
+        networkPassphrase: Networks.PUBLIC,
+      })
+        .addOperation(this.contract.call('lastprice', assetParam))
+        .setTimeout(30)
+        .build();
+
+      const simResult = await __runLimited(() => this.rpcServer.simulateTransaction(transaction));
+      if ('error' in simResult) throw new Error(`Price fetch failed: ${simResult.error}`);
+
+      if ('result' in simResult && simResult.result && 'retval' in simResult.result) {
+        const { scValToNative } = await import('@stellar/stellar-sdk');
+        const resultValue = scValToNative(simResult.result.retval);
+        let price = 0;
+        if (resultValue && typeof resultValue === 'object') {
+          if ('Some' in resultValue && resultValue.Some && typeof resultValue.Some === 'object' && 'price' in resultValue.Some) {
+            price = parseFloat(String(resultValue.Some.price));
+          } else if ('price' in resultValue) {
+            price = parseFloat(String(resultValue.price));
+          } else if (typeof (resultValue as any) === 'number' || typeof (resultValue as any) === 'string') {
+            price = parseFloat(String(resultValue as any));
+          }
+        }
+        OracleClient.cacheLastPrice.set(key, { data: price, ts: Date.now() });
+        return price;
+      }
+      return 0;
+    })();
+
+    OracleClient.inflightLastPrice.set(key, promise);
+    try {
+      return await promise;
+    } finally {
+      OracleClient.inflightLastPrice.delete(key);
+    }
   }
 }
-
-// Export singleton instances
-const mainnetClient = new ReflectorOracleClient('mainnet');
-const testnetClient = new ReflectorOracleClient('testnet');
-
-export const getOracleClient = (network: 'mainnet' | 'testnet'): ReflectorOracleClient =>
-  network === 'mainnet' ? mainnetClient : testnetClient;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-import { getAssetPrices, getPriceEngine } from '@/lib/reflector';
+import { getAssetPrice, getAssetPrices, clearPriceCache } from '@/lib/reflector';
 
 interface AssetPrice {
   code: string;
@@ -45,11 +45,7 @@ export const useAssetPrices = (
       // Deduplicate assets to reduce API calls
       const uniqueAssets = [...new Set(assets.filter(Boolean))];
       
-      const priceData = await getAssetPrices(
-        uniqueAssets, 
-        quoteCurrency, 
-        network === 'mainnet' ? 'mainnet' : 'testnet'
-      );
+      const priceData = await getAssetPrices(uniqueAssets, quoteCurrency);
       
       setPrices(priceData);
     } catch (err) {
@@ -63,10 +59,9 @@ export const useAssetPrices = (
 
   const refresh = useCallback(async () => {
     // Clear cache and refetch
-    const engine = getPriceEngine(network === 'mainnet' ? 'mainnet' : 'testnet');
-    engine.clearCache();
+    clearPriceCache();
     await fetchPrices();
-  }, [fetchPrices, network]);
+  }, [fetchPrices]);
 
   const getPrice = useCallback((assetCode: string): number => {
     return prices[assetCode] || 0;

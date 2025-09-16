@@ -1,4 +1,4 @@
-import { getPriceEngine } from './reflector';
+import { getAssetPrice } from './reflector';
 import { getCurrentXlmUsdRate } from './kraken';
 
 /**
@@ -10,8 +10,7 @@ export async function getUsdFxRate(toCurrency: string, network?: 'mainnet' | 'te
   
   // Try Reflector engine first (always mainnet for pricing)
   try {
-    const engine = getPriceEngine('mainnet');
-    const rate = await engine.getPrice('USD', target);
+    const rate = await getAssetPrice('USD');
     if (rate && rate > 0) return rate;
   } catch (error) {
     console.warn(`Reflector FX rate failed USD->${target}:`, error);
@@ -62,9 +61,8 @@ export async function convertUsd(usdAmount: number, toCurrency: string, network?
 export async function getXlmRateWithFallback(toCurrency: string = 'USD', network?: 'mainnet' | 'testnet'): Promise<number | null> {
   try {
     // Try Reflector engine first (always mainnet for accurate pricing)
-    const engine = getPriceEngine('mainnet');
     const rate = await Promise.race([
-      engine.getPrice('XLM', toCurrency),
+      getAssetPrice('XLM'),
       new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 5000)
       )

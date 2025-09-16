@@ -1,72 +1,42 @@
-import { nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
-import { AssetInfo, AssetType } from './asset-type';
+import { xdr, Address, scValToNative } from '@stellar/stellar-sdk';
+import { AssetType, type AssetTypeValue } from './asset-type';
 
-export const buildAssetScVal = (asset: AssetInfo): xdr.ScVal => {
-  if (asset.type === AssetType.Stellar) {
-    if (asset.code === 'XLM') {
-      return nativeToScVal('stellar:native', { type: 'string' });
-    }
-    
-    if (asset.contractId) {
-      return nativeToScVal(asset.contractId, { type: 'string' });
-    }
-    
-    if (asset.issuer) {
-      return nativeToScVal(`stellar:${asset.issuer}:${asset.code}`, { type: 'string' });
-    }
-    
-    return nativeToScVal(`stellar:${asset.code}`, { type: 'string' });
-  }
-  
-  // For other assets, use the code directly
-  return nativeToScVal(asset.code, { type: 'string' });
-};
+export interface Asset {
+  type: AssetTypeValue;
+  code: string;
+}
 
-export const parseSorobanResult = (result: xdr.ScVal): any => {
-  try {
-    const native = scValToNative(result);
-    
-    // Handle different result formats
-    if (typeof native === 'object' && native !== null) {
-      // If it's an object with a price field
-      if ('price' in native) {
-        return parseFloat(native.price.toString());
-      }
-      
-      // If it's an object with a value field  
-      if ('value' in native) {
-        return parseFloat(native.value.toString());
-      }
-      
-      // If it's a number-like object
-      if (typeof native.toString === 'function') {
-        const str = native.toString();
-        const num = parseFloat(str);
-        if (!isNaN(num)) return num;
-      }
-    }
-    
-    // Handle direct number/string
-    if (typeof native === 'number') {
-      return native;
-    }
-    
-    if (typeof native === 'string') {
-      const num = parseFloat(native);
-      if (!isNaN(num)) return num;
-    }
-    
-    // Handle BigInt
-    if (typeof native === 'bigint') {
-      return Number(native);
-    }
-    
-    throw new Error(`Unsupported result format: ${typeof native}`);
-  } catch (error) {
-    throw new Error(`Failed to parse Soroban result: ${error}`);
-  }
-};
+// Re-export AssetType for convenience
+export { AssetType } from './asset-type';
 
-export const scalePrice = (price: number, decimals: number): number => {
-  return price / Math.pow(10, decimals);
-};
+/**
+* @param {Asset} asset - Asset object
+* @returns {xdr.ScVal}
+*/
+export function buildAssetScVal(asset: Asset): xdr.ScVal {
+    switch (asset.type) {
+        case AssetType.Stellar:
+            return xdr.ScVal.scvVec([
+                xdr.ScVal.scvSymbol('Stellar'), 
+                new Address(asset.code).toScVal()
+            ]);
+        case AssetType.Other:
+            return xdr.ScVal.scvVec([
+                xdr.ScVal.scvSymbol('Other'), 
+                xdr.ScVal.scvSymbol(asset.code)
+            ]);
+        default:
+            throw new Error('Invalid asset type');
+    }
+}
+
+/**
+* @param {xdr.TransactionMeta} result - XDR result meta
+* @returns {any}
+*/
+export function parseSorobanResult(result: any): any {
+    const value = result.value().sorobanMeta().returnValue();
+    if (value.value() === false) // if footprint's data is different from the contract execution data, the result is false
+        return undefined;
+    return scValToNative(value);
+}

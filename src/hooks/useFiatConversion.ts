@@ -36,7 +36,7 @@ export const useFiatConversion = (): UseFiatConversionReturn => {
         throw new Error('Amount must be positive');
       }
 
-      const rate = await getAssetPrice('XLM', quoteCurrency); // Always uses mainnet
+      const rate = await getAssetPrice('XLM'); // Always uses mainnet
       
       const fiatAmount = decimal.mul(rate).toNumber();
       
@@ -113,7 +113,7 @@ export const useAmountToFiat = (amount: string | number, assetCode: string = 'XL
 
       try {
         const decimal = new Decimal(amount);
-        const rate = await getAssetPrice(assetCode, quoteCurrency); // Always uses mainnet
+        const rate = await getAssetPrice(assetCode); // Always uses mainnet
         
         const fiatAmount = decimal.mul(rate).toNumber();
 

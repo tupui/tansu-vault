@@ -68,7 +68,7 @@ export const getXlmFiatRate = async (
   fiatCurrency: string,
   network?: string
 ): Promise<number> => {
-  return await getAssetPrice('XLM', fiatCurrency, 'mainnet'); // Always use mainnet for pricing
+  return await getAssetPrice('XLM'); // Always use mainnet for pricing
 };
 
 /**
