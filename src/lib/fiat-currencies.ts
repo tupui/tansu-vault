@@ -62,25 +62,23 @@ export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' 
 }
 
 /**
- * Get exchange rate for XLM to fiat currency (always uses mainnet for accurate rates)
+ * Get exchange rate for XLM to fiat currency (EXACT copy from Stellar-Stratum)
  */
 export const getXlmFiatRate = async (
   fiatCurrency: string,
   network?: string
 ): Promise<number> => {
   try {
-    // Get XLM price in USD from Reflector
-    const xlmUsdPrice = await getAssetPrice('XLM'); // Always use mainnet for pricing
+    // Get current XLM price in USD
+    const xlmToUsdRate = await getAssetPrice('XLM');
     
-    if (fiatCurrency.toUpperCase() === 'USD') {
-      return xlmUsdPrice;
+    if (fiatCurrency === 'USD') {
+      return xlmToUsdRate;
     }
-    
-    // Convert USD to target currency
-    const { getUsdFxRate } = await import('./fx');
-    const usdToTargetRate = await getUsdFxRate(fiatCurrency);
-    
-    return xlmUsdPrice * usdToTargetRate;
+
+    // Get FX rate and convert
+    const { convertFromUSD } = await import('./fx');
+    return await convertFromUSD(xlmToUsdRate, fiatCurrency);
   } catch (error) {
     console.error('Failed to get XLM fiat rate:', error);
     return 0;

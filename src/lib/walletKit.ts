@@ -111,47 +111,17 @@ export const isWalletConnected = (): boolean => {
  */
 export const getSupportedWallets = async (network?: string): Promise<any[]> => {
   try {
-    // Mock wallet data - in a real implementation, this would query the actual wallet kit
-    const mockWallets = [
-      {
-        id: 'freighter',
-        name: 'Freighter',
-        icon: null,
-        isAvailable: typeof window !== 'undefined' && !!(window as any).freighter
-      },
-      {
-        id: 'xbull',
-        name: 'xBull',
-        icon: null,
-        isAvailable: typeof window !== 'undefined' && !!(window as any).xBullWalletConnect
-      },
-      {
-        id: 'ledger',
-        name: 'Ledger',
-        icon: null,
-        isAvailable: true // Hardware wallets are always "available"
-      },
-      {
-        id: 'lobstr',
-        name: 'Lobstr',
-        icon: null,
-        isAvailable: true
-      },
-      {
-        id: 'hot',
-        name: 'Hot Wallet',
-        icon: null,
-        isAvailable: true
-      },
-      {
-        id: 'albedo',
-        name: 'Albedo',
-        icon: null,
-        isAvailable: true
-      }
-    ];
+    // Proper wallet detection using walletConfig
+    const { WALLET_CONFIGS } = await import('./walletConfig');
     
-    return mockWallets;
+    const wallets = Object.values(WALLET_CONFIGS).map(wallet => ({
+      id: wallet.id,
+      name: wallet.name,
+      icon: null,
+      isAvailable: wallet.detectAvailability?.() ?? true
+    }));
+    
+    return wallets;
   } catch (error) {
     console.error('Failed to get supported wallets:', error);
     return [];

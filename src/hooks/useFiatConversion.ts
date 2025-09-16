@@ -1,153 +1,90 @@
+// EXACT copy from Stellar-Stratum useFiatConversion.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { getAssetPrice } from '@/lib/reflector';
-import { useNetwork } from '@/contexts/NetworkContext';
-import Decimal from 'decimal.js';
+import { getFxRate } from '@/lib/fx';
 
-interface ConversionResult {
-  fiatAmount: number;
-  rate: number;
-  currency: string;
-  timestamp: number;
-}
-
-interface UseFiatConversionReturn {
-  convertXLMToFiat: (xlmAmount: string | number) => Promise<ConversionResult | null>;
-  formatFiatAmount: (amount: number, currency?: string) => string;
+interface FiatConversionHook {
+  convertXLMToFiat: (xlmAmount: number) => Promise<number>;
+  formatFiatAmount: (amount: number) => string;
   isLoading: boolean;
   error: string | null;
-  lastRate: number | null;
+  exchangeRate: number | null;
 }
 
-export const useFiatConversion = (): UseFiatConversionReturn => {
+export const useFiatConversion = (): FiatConversionHook => {
   const { quoteCurrency, getCurrentCurrency } = useFiatCurrency();
-  const { network } = useNetwork();
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastRate, setLastRate] = useState<number | null>(null);
 
-  const convertXLMToFiat = useCallback(async (xlmAmount: string | number): Promise<ConversionResult | null> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const decimal = new Decimal(xlmAmount);
-      if (!decimal.isPositive()) {
-        throw new Error('Amount must be positive');
+  // Fetch exchange rate when currency changes
+  useEffect(() => {
+    const fetchRate = async () => {
+      if (quoteCurrency === 'USD') {
+        setExchangeRate(1);
+        return;
       }
 
-      // Get XLM price in the target currency
-      const { getXlmFiatRate } = await import('@/lib/fiat-currencies');
-      const rate = await getXlmFiatRate(quoteCurrency);
-      
-      const fiatAmount = decimal.mul(rate).toNumber();
-      
-      setLastRate(rate);
+      setIsLoading(true);
+      setError(null);
 
-      return {
-        fiatAmount,
-        rate,
-        currency: quoteCurrency,
-        timestamp: Date.now()
-      };
+      try {
+        const rate = await getFxRate(quoteCurrency);
+        setExchangeRate(rate);
+      } catch (err) {
+        setError(`Failed to fetch exchange rate for ${quoteCurrency}`);
+        setExchangeRate(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRate();
+  }, [quoteCurrency]);
+
+  const convertXLMToFiat = useCallback(async (xlmAmount: number): Promise<number> => {
+    try {
+      // Get current XLM price in USD
+      const xlmToUsdRate = await getAssetPrice('XLM');
+      const usdAmount = xlmAmount * xlmToUsdRate;
+
+      if (quoteCurrency === 'USD') {
+        return usdAmount;
+      }
+
+      if (exchangeRate) {
+        return usdAmount * exchangeRate;
+      }
+
+      // If no rate available, return USD amount
+      return usdAmount;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to convert XLM to fiat';
-      setError(errorMessage);
-      console.error('Fiat conversion error:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
+      throw new Error('Failed to convert XLM to fiat');
     }
-  }, [quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
+  }, [quoteCurrency, exchangeRate]);
 
-  const formatFiatAmount = useCallback((amount: number, currency?: string): string => {
-    const targetCurrency = currency || quoteCurrency;
-    const currencyInfo = getCurrentCurrency();
+  const formatFiatAmount = useCallback((amount: number): string => {
+    const currency = getCurrentCurrency();
     
     try {
-      // Use Intl.NumberFormat for proper currency formatting
-      const formatter = new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: targetCurrency,
+        currency: currency.code,
         minimumFractionDigits: 2,
-        maximumFractionDigits: 6
-      });
-      
-      return formatter.format(amount);
+        maximumFractionDigits: 2,
+      }).format(amount);
     } catch {
-      // Fallback formatting if Intl.NumberFormat fails
-      const symbol = currencyInfo.symbol || '$';
-      return `${symbol}${amount.toFixed(2)}`;
+      // Fallback if currency not supported by Intl.NumberFormat
+      return `${currency.symbol}${amount.toFixed(2)}`;
     }
-  }, [quoteCurrency, getCurrentCurrency]);
-
-  // Clear error when currency changes
-  useEffect(() => {
-    setError(null);
-  }, [quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
+  }, [getCurrentCurrency]);
 
   return {
     convertXLMToFiat,
     formatFiatAmount,
     isLoading,
     error,
-    lastRate
+    exchangeRate
   };
-};
-
-// Hook for converting any amount to fiat with caching
-export const useAmountToFiat = (amount: string | number, assetCode: string = 'XLM') => {
-  const { quoteCurrency } = useFiatCurrency();
-  const { network } = useNetwork();
-  const [result, setResult] = useState<ConversionResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!amount || Number(amount) <= 0) {
-      setResult(null);
-      return;
-    }
-
-    const convertAmount = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const decimal = new Decimal(amount);
-        
-        // Get asset price in the target currency
-        let rate;
-        if (assetCode === 'XLM') {
-          const { getXlmFiatRate } = await import('@/lib/fiat-currencies');
-          rate = await getXlmFiatRate(quoteCurrency);
-        } else {
-          // For other assets, get USD price and convert
-          const usdRate = await getAssetPrice(assetCode);
-          const { getUsdFxRate } = await import('@/lib/fx');
-          const usdToTargetRate = await getUsdFxRate(quoteCurrency);
-          rate = usdRate * usdToTargetRate;
-        }
-        
-        const fiatAmount = decimal.mul(rate).toNumber();
-
-        setResult({
-          fiatAmount,
-          rate,
-          currency: quoteCurrency,
-          timestamp: Date.now()
-        });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to convert to fiat';
-        setError(errorMessage);
-        console.error('Amount to fiat conversion error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    convertAmount();
-  }, [amount, assetCode, quoteCurrency]); // Removed network dependency since we always use mainnet for pricing
-
-  return { result, isLoading, error };
 };

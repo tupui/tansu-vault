@@ -19,7 +19,7 @@ export const WALLET_CONFIGS: Record<string, WalletConfig> = {
     name: 'Freighter',
     description: 'Browser extension wallet for Stellar',
     type: 'extension',
-    detectAvailability: () => typeof window !== 'undefined' && !!(window as any).freighter,
+    detectAvailability: () => typeof window !== 'undefined' && !!(window as any).freighter && typeof (window as any).freighter.isConnected === 'function',
     installUrl: 'https://freighter.app/'
   },
   xbull: {
@@ -27,7 +27,7 @@ export const WALLET_CONFIGS: Record<string, WalletConfig> = {
     name: 'xBull Wallet',
     description: 'Multi-platform wallet (Mobile, Web, Extension)',
     type: 'extension',
-    detectAvailability: () => true, // Always available via WalletConnect/QR
+    detectAvailability: () => typeof window !== 'undefined' && !!(window as any).xBull,
     installUrl: 'https://xbull.app/'
   },
   ledger: {

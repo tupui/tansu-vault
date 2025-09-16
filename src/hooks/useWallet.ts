@@ -26,6 +26,7 @@ interface WalletContextType {
   connectedDomain: string | null;
   connect: (walletId: string) => Promise<void>;
   connectViaDomain: (walletId: string, domain: string) => Promise<void>;
+  connectReadOnly: (address: string, source?: string) => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
 }
@@ -145,6 +146,30 @@ export const useWalletState = (): WalletContextType => {
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
       console.error('Wallet connection error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const connectReadOnly = async (address: string, source?: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Set up read-only connection (no wallet signing capability)
+      setAddress(address);
+      setWalletId(null); // No wallet ID for read-only
+      setIsDomainConnected(!!source);
+      setConnectedDomain(source || null);
+      localStorage.setItem('tansu_wallet_address', address);
+      localStorage.setItem('tansu_readonly_mode', 'true');
+      if (source) {
+        localStorage.setItem('tansu_connected_domain', source);
+      }
+      await refreshBalances(address);
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect in read-only mode');
+      console.error('Read-only connection error:', err);
     } finally {
       setIsLoading(false);
     }

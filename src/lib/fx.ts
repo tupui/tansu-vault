@@ -1,95 +1,93 @@
+// EXACT copy from Stellar-Stratum fiat-currencies.ts
 import { getAssetPrice } from './reflector';
-import { getCurrentXlmUsdRate } from './kraken';
+import { REFLECTOR_ORACLE_CONTRACTS } from './appConfig';
 
-/**
- * Get USD to fiat exchange rate using proper Reflector engine (always mainnet for accurate rates)
- */
-export async function getUsdFxRate(toCurrency: string, network?: 'mainnet' | 'testnet'): Promise<number> {
-  const target = (toCurrency || 'USD').toUpperCase();
-  if (target === 'USD') return 1;
+// Cache for FX rates
+const fxRatesCache: Record<string, { rate: number; timestamp: number }> = {};
+const FX_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// FX Oracle configuration (using actual working contract)
+const FX_ORACLE = {
+  contract: REFLECTOR_ORACLE_CONTRACTS.mainnet.forex, // Use actual working forex oracle
+  decimals: 14
+};
+
+// Get exchange rate quoted in USD per 1 unit of target currency (e.g., EURUSD)
+export const getFxRate = async (targetCurrency: string): Promise<number> => {
+  if (targetCurrency === 'USD') return 1;
   
-  // Try Reflector engine first (always mainnet for pricing)
+  const cacheKey = `USD_${targetCurrency}`;
+  const cached = fxRatesCache[cacheKey];
+  
+  if (cached && (Date.now() - cached.timestamp) < FX_CACHE_DURATION) {
+    return cached.rate;
+  }
+  
   try {
-    const rate = await getAssetPrice('USD');
-    if (rate && rate > 0) return rate;
+    const { OracleClient, AssetType } = await import('./reflector-client');
+    const client = new (OracleClient as any)(FX_ORACLE.contract);
+    
+    // Fetch rate for target currency from oracle
+    const rawRate = await client.getLastPrice({
+      type: AssetType.Other,
+      code: targetCurrency
+    });
+    
+    if (rawRate > 0) {
+      const rate = rawRate / Math.pow(10, FX_ORACLE.decimals); // USD per 1 target unit
+      fxRatesCache[cacheKey] = { rate, timestamp: Date.now() };
+      return rate;
+    } else {
+      throw new Error(`No rate available for ${targetCurrency}`);
+    }
   } catch (error) {
-    console.warn(`Reflector FX rate failed USD->${target}:`, error);
-  }
-
-  // Public API fallback with simple in-memory cache (15 minutes)
-  try {
-    const cacheKey = `fx_USD_${target}`;
-    const now = Date.now();
-    // Persist across HMR by attaching to globalThis
-    const g: any = globalThis as any;
-    g.__fxCache = g.__fxCache || new Map<string, { r: number; t: number }>();
-    const cached = g.__fxCache.get(cacheKey);
-    if (cached && now - cached.t < 15 * 60_000) {
-      return cached.r;
-    }
-
-    const res = await fetch('https://open.er-api.com/v6/latest/USD');
-    if (res.ok) {
-      const data = await res.json();
-      const r = data?.rates?.[target];
-      if (typeof r === 'number' && r > 0) {
-        g.__fxCache.set(cacheKey, { r, t: now });
-        return r;
+    console.warn(`Failed to fetch FX rate for ${targetCurrency}:`, error);
+    
+    // Fallback to public API
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (res.ok) {
+        const data = await res.json();
+        const rate = data?.rates?.[targetCurrency];
+        if (typeof rate === 'number' && rate > 0) {
+          fxRatesCache[cacheKey] = { rate, timestamp: Date.now() };
+          return rate;
+        }
       }
+    } catch (fallbackError) {
+      console.warn(`Public FX fallback failed USD->${targetCurrency}:`, fallbackError);
     }
-  } catch (fallbackError) {
-    console.warn(`Public FX fallback failed USD->${target}:`, fallbackError);
+    
+    throw error; // Don't fallback to hardcoded rates
   }
+};
+
+// Convert an amount in USD to the target currency using USD-per-target quote
+// If rate is USD per 1 target unit (e.g., EURUSD), then target = USD / rate
+export const convertFromUSD = async (usdAmount: number, targetCurrency: string): Promise<number> => {
+  if (targetCurrency === 'USD') return usdAmount;
   
-  // Final fallback
-  return 1;
+  const rate = await getFxRate(targetCurrency);
+  return usdAmount / rate; // Convert using the USD-per-target rate
+};
+
+// Legacy functions for backward compatibility
+export async function getUsdFxRate(toCurrency: string, network?: 'mainnet' | 'testnet'): Promise<number> {
+  return await getFxRate(toCurrency);
 }
 
-/**
- * Convert USD amount to target fiat currency (always uses mainnet rates)
- */
 export async function convertUsd(usdAmount: number, toCurrency: string, network?: 'mainnet' | 'testnet'): Promise<number> {
-  if (toCurrency === 'USD') return usdAmount;
-  
-  const rate = await getUsdFxRate(toCurrency);
-  return usdAmount * rate;
+  return await convertFromUSD(usdAmount, toCurrency);
 }
 
-/**
- * Get XLM rate with robust fallback (Reflector -> Kraken) - always uses mainnet rates
- */
 export async function getXlmRateWithFallback(toCurrency: string = 'USD', network?: 'mainnet' | 'testnet'): Promise<number | null> {
   try {
-    // Try Reflector engine first (always mainnet for accurate pricing)
-    const rate = await Promise.race([
-      getAssetPrice('XLM'),
-      new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      )
-    ]);
+    const xlmUsdPrice = await getAssetPrice('XLM');
+    if (toCurrency === 'USD') return xlmUsdPrice;
     
-    if (rate && rate > 0) {
-      return rate;
-    }
-  } catch (error) {
-    console.warn('Reflector XLM price failed, trying Kraken fallback:', error);
+    const fxRate = await getFxRate(toCurrency);
+    return xlmUsdPrice * fxRate;
+  } catch {
+    return null;
   }
-  
-  try {
-    // Fallback to Kraken for XLM/USD then convert if needed
-    const usdRate = await getCurrentXlmUsdRate();
-    if (usdRate && usdRate > 0) {
-      if (toCurrency === 'USD') {
-        return usdRate;
-      } else {
-        // Convert USD to target currency using FX rate (mainnet)
-        const fxRate = await getUsdFxRate(toCurrency);
-        return usdRate * fxRate;
-      }
-    }
-  } catch (error) {
-    console.warn('Kraken XLM price also failed:', error);
-  }
-  
-  return null;
 }

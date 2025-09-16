@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
@@ -9,8 +7,6 @@ import {
   ArrowRight, 
   RefreshCw, 
   ChevronDown,
-  Key,
-  Globe,
   Zap,
   Shield,
   Smartphone
@@ -19,8 +15,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useToast } from '@/hooks/use-toast';
 import { WALLET_CONFIGS, getPrimaryWallets, getSecondaryWallets } from '@/lib/walletConfig';
-import { isValidPublicKey, isValidDomain, sanitizeError } from '@/lib/validation';
-import { resolveSorobanDomain } from '@/lib/soroban-domains';
+import { sanitizeError } from '@/lib/validation';
 
 interface StratumWalletModalLightProps {
   open: boolean;
@@ -63,11 +58,6 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
     network === 'mainnet' ? 'mainnet' : 'testnet'
   );
   const [showMoreWallets, setShowMoreWallets] = useState(false);
-  const [manualAddress, setManualAddress] = useState('');
-  const [domainInput, setDomainInput] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [showDomainInput, setShowDomainInput] = useState(false);
-  const [resolvingDomain, setResolvingDomain] = useState(false);
 
   const primaryWallets = getPrimaryWallets();
   const secondaryWallets = getSecondaryWallets();
@@ -99,64 +89,6 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
     }
   }, [connect, onOpenChange, toast, selectedNetwork, network, setNetwork]);
 
-  const handleManualAddressSubmit = useCallback(() => {
-    if (!isValidPublicKey(manualAddress.trim())) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Address",
-        description: "Please enter a valid Stellar public key",
-      });
-      return;
-    }
-    
-    toast({
-      title: "Address Added",
-      description: "Ready to view account details",
-    });
-    onOpenChange(false);
-    setManualAddress('');
-    setShowManualInput(false);
-  }, [manualAddress, onOpenChange, toast]);
-
-  const handleDomainResolve = useCallback(async () => {
-    if (!isValidDomain(domainInput.trim())) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Domain",
-        description: "Please enter a valid domain name",
-      });
-      return;
-    }
-    
-    setResolvingDomain(true);
-    try {
-      const resolvedAddress = await resolveSorobanDomain(domainInput.trim(), selectedNetwork);
-      if (resolvedAddress) {
-        toast({
-          title: "Domain Resolved",
-          description: `Successfully resolved ${domainInput}`,
-        });
-        onOpenChange(false);
-        setDomainInput('');
-        setShowDomainInput(false);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Domain Not Found",
-          description: `Could not resolve "${domainInput}"`,
-        });
-      }
-    } catch (error) {
-      const { userMessage } = sanitizeError(error);
-      toast({
-        variant: "destructive",
-        title: "Resolution Failed",
-        description: userMessage,
-      });
-    } finally {
-      setResolvingDomain(false);
-    }
-  }, [domainInput, onOpenChange, toast, selectedNetwork]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,120 +127,34 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3">
-          {/* Manual Address Entry */}
-          {!showManualInput ? (
-            <button
-              className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group"
-              onClick={() => setShowManualInput(true)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Key className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium">Enter address manually</div>
-                  <div className="text-sm text-muted-foreground">View any account by public key</div>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </button>
-          ) : (
-            <div className="p-4 bg-muted rounded-xl space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                  <Key className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium">Enter address manually</div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="manual-address">Stellar Public Key</Label>
-                <Input
-                  id="manual-address"
-                  placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                  value={manualAddress}
-                  onChange={(e) => setManualAddress(e.target.value)}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleManualAddressSubmit} className="flex-1">
-                  Connect
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowManualInput(false);
-                    setManualAddress('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
 
-          {/* Soroban Domains */}
-          {!showDomainInput ? (
-            <button
-              className="w-full flex items-center justify-between p-4 bg-muted hover:bg-muted/80 rounded-xl transition-colors group"
-              onClick={() => setShowDomainInput(true)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium">Soroban Domains</div>
-                  <div className="text-sm text-muted-foreground">Resolve domain to address</div>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </button>
-          ) : (
-            <div className="p-4 bg-muted rounded-xl space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium">Soroban Domains</div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="domain-input">Domain Name</Label>
-                <Input
-                  id="domain-input"
-                  placeholder="myname.xlm"
-                  value={domainInput}
-                  onChange={(e) => setDomainInput(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleDomainResolve} disabled={resolvingDomain} className="flex-1">
-                  {resolvingDomain && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-                  Resolve
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowDomainInput(false);
-                    setDomainInput('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Primary Wallets */}
           {primaryWallets.map((wallet) => {
             const isAvailable = wallet.detectAvailability?.() ?? true;
             const isConnecting = connecting === wallet.id;
-            const hasExtension = wallet.id === 'xbull' ? 
-              (typeof window !== 'undefined' && !!(window as any).xBull) : isAvailable;
+            
+            // Proper wallet status detection
+            let statusText = 'Available';
+            if (wallet.type === 'extension') {
+              if (wallet.id === 'freighter') {
+                statusText = isAvailable ? 'Extension detected' : 'Install extension';
+              } else if (wallet.id === 'xbull') {
+                statusText = isAvailable ? 'Extension detected' : 'Mobile/QR available';
+              } else if (wallet.id === 'rabet') {
+                statusText = isAvailable ? 'Extension detected' : 'Install extension';
+              } else if (wallet.id === 'hana') {
+                statusText = isAvailable ? 'Extension detected' : 'Install extension';
+              } else {
+                statusText = isAvailable ? 'Available' : 'Install extension';
+              }
+            } else if (wallet.type === 'hardware') {
+              statusText = 'Connect via USB/Bluetooth';
+            } else if (wallet.type === 'mobile') {
+              statusText = 'Mobile/QR available';
+            } else {
+              statusText = 'Available';
+            }
 
             return (
               <button
@@ -322,11 +168,7 @@ export const StratumWalletModalLight = ({ open, onOpenChange }: StratumWalletMod
                   <div className="text-left">
                     <div className="font-medium">{wallet.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {wallet.id === 'xbull' && !hasExtension
-                        ? 'Will use QR code'
-                        : hasExtension 
-                        ? 'Available' 
-                        : 'Not detected'}
+                      {statusText}
                     </div>
                   </div>
                 </div>
