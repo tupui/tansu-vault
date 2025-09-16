@@ -16,11 +16,11 @@ const SAMPLE_ASSETS = [
 ];
 
 const SAMPLE_BALANCES = [
-  { code: 'XLM', balance: 1000.5 },
-  { code: 'USDC', balance: 250.75, issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
-  { code: 'BTC', balance: 0.025 },
-  { code: 'ETH', balance: 1.5 },
-  { code: 'EUR', balance: 500.0 },
+  { asset_type: 'native', balance: '1000.5' },
+  { asset_type: 'credit_alphanum4', asset_code: 'USDC', balance: '250.75', asset_issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
+  { asset_type: 'credit_alphanum4', asset_code: 'BTC', balance: '0.025' },
+  { asset_type: 'credit_alphanum4', asset_code: 'ETH', balance: '1.5' },
+  { asset_type: 'credit_alphanum4', asset_code: 'EUR', balance: '500.0' },
 ];
 
 export const AssetPricing: React.FC = () => {
@@ -240,8 +240,6 @@ export const AssetPricing: React.FC = () => {
             balances={SAMPLE_BALANCES}
             title="Portfolio Balance Panel"
             showRefresh={true}
-            hideSmallBalances={false}
-            smallBalanceThreshold={1.0}
           />
         </TabsContent>
 

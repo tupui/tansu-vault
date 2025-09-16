@@ -196,7 +196,24 @@ export const loadAccount = async (address: string): Promise<Account> => {
 export const getAccountBalances = async (address: string): Promise<any[]> => {
   try {
     const account = await getHorizonServer().loadAccount(address);
-    return account.balances;
+    // Return balances in the format expected by AssetBalancePanel (balance as string)
+    return account.balances.map(balance => {
+      const baseBalance = {
+        asset_type: balance.asset_type,
+        balance: balance.balance // Keep as string to match Stellar-Stratum format
+      };
+      
+      // Add asset_code and asset_issuer for non-native assets
+      if (balance.asset_type !== 'native' && 'asset_code' in balance) {
+        return {
+          ...baseBalance,
+          asset_code: balance.asset_code,
+          asset_issuer: balance.asset_issuer
+        };
+      }
+      
+      return baseBalance;
+    });
   } catch (error) {
     console.error('Failed to get account balances:', error);
     throw new Error('Failed to fetch account balances');

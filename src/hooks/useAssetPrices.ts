@@ -1,130 +1,198 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNetwork } from '@/contexts/NetworkContext';
-import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-import { getAssetPrice, getAssetPrices, clearPriceCache } from '@/lib/reflector';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getAssetPrice, setLastFetchTimestamp } from '@/lib/reflector';
 
-interface AssetPrice {
-  code: string;
-  price: number;
-  error?: string;
+interface AssetBalance {
+  asset_type: string;
+  asset_code?: string;
+  asset_issuer?: string;
+  balance: string;
 }
 
-interface UseAssetPricesResult {
-  prices: Record<string, number>;
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-  getPrice: (assetCode: string) => number;
-  getTotalValue: (balances: Record<string, number>) => number;
+interface AssetWithPrice extends AssetBalance {
+  priceUSD: number;
+  valueUSD: number;
+  symbol: string;
 }
 
-interface UseAssetPricesOptions {
-  refreshInterval?: number;
-  enabled?: boolean;
-}
-
-export const useAssetPrices = (
-  assets: string[],
-  options: UseAssetPricesOptions = {}
-): UseAssetPricesResult => {
-  const { refreshInterval = 10 * 60 * 1000, enabled = true } = options; // Increased default to 10 minutes
-  const { network } = useNetwork();
-  const { quoteCurrency } = useFiatCurrency();
-  
-  const [prices, setPrices] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(false);
+export const useAssetPrices = (balances: AssetBalance[]) => {
+  const [assetsWithPrices, setAssetsWithPrices] = useState<AssetWithPrice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPrices = useCallback(async () => {
-    if (!enabled || assets.length === 0) return;
-    
-    setLoading(true);
-    setError(null);
+  // Memoize balances to prevent unnecessary re-renders
+  const memoizedBalances = useMemo(() => balances, [JSON.stringify(balances)]);
 
+  // Memoize the refetch function to prevent unnecessary re-renders
+  const refetch = useCallback(async () => {
+    if (!memoizedBalances || memoizedBalances.length === 0) return;
+    
     try {
-      // Deduplicate assets to reduce API calls
-      const uniqueAssets = [...new Set(assets.filter(Boolean))];
+      setLoading(true);
+      setError(null);
+
+      const assetsWithPricesPromises = memoizedBalances.map(async (balance) => {
+        try {
+          const priceUSD = await getAssetPrice(balance.asset_code, balance.asset_issuer);
+          const balanceNum = parseFloat(balance.balance);
+          const valueUSD = balanceNum * priceUSD;
+          return {
+            ...balance,
+            priceUSD,
+            valueUSD,
+            symbol: balance.asset_code || 'XLM'
+          };
+        } catch {
+          return {
+            ...balance,
+            priceUSD: 0,
+            valueUSD: 0,
+            symbol: balance.asset_code || 'XLM'
+          };
+        }
+      });
+
+      const results = await Promise.allSettled(assetsWithPricesPromises);
       
-      const priceData = await getAssetPrices(uniqueAssets, quoteCurrency);
+      const successfulResults = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<any>).value);
+        
+      successfulResults.sort((a, b) => b.valueUSD - a.valueUSD);
+      setAssetsWithPrices(successfulResults);
+      setLastFetchTimestamp();
       
-      setPrices(priceData);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch asset prices';
-      setError(errorMessage);
-      console.error('Asset prices fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch asset prices');
     } finally {
       setLoading(false);
     }
-  }, [assets.join(','), quoteCurrency, network, enabled]); // Use join for stable dependency
+  }, [memoizedBalances]);
 
-  const refresh = useCallback(async () => {
-    // Clear cache and refetch
-    clearPriceCache();
-    await fetchPrices();
-  }, [fetchPrices]);
-
-  const getPrice = useCallback((assetCode: string): number => {
-    return prices[assetCode] || 0;
-  }, [prices]);
-
-  const getTotalValue = useCallback((balances: Record<string, number>): number => {
-    return Object.entries(balances).reduce((total, [assetCode, balance]) => {
-      const price = getPrice(assetCode);
-      return total + (balance * price);
-    }, 0);
-  }, [getPrice]);
-
-  // Initial fetch
   useEffect(() => {
+    const fetchPrices = async () => {
+      if (!memoizedBalances || memoizedBalances.length === 0) {
+        setAssetsWithPrices([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Initialize assets skeleton
+        const initialAssets: AssetWithPrice[] = memoizedBalances.map(balance => ({
+          ...balance,
+          priceUSD: -1,
+          valueUSD: 0,
+          symbol: balance.asset_code || 'XLM'
+        }));
+        setAssetsWithPrices(initialAssets);
+
+        // Deduplicate price requests by unique asset key to avoid redundant oracle calls
+        const uniqueMap = new Map<string, number[]>(); // key -> indices
+        memoizedBalances.forEach((b, i) => {
+          const key = b.asset_issuer ? `${b.asset_code}:${b.asset_issuer}` : (b.asset_code || 'XLM');
+          const arr = uniqueMap.get(key) || [];
+          arr.push(i);
+          uniqueMap.set(key, arr);
+        });
+
+        const uniquePromises = Array.from(uniqueMap.keys()).map(async (key) => {
+          const [code, issuer] = key.includes(':') ? key.split(':') : [key, undefined];
+          try {
+            const price = await getAssetPrice(code, issuer);
+            return { key, price: price > 0 ? price : 0 };
+          } catch {
+            return { key, price: 0 };
+          }
+        });
+
+        const uniqueResults = await Promise.allSettled(uniquePromises);
+        const priceMap = new Map<string, number>();
+        uniqueResults.forEach((res, idx) => {
+          const key = Array.from(uniqueMap.keys())[idx];
+          priceMap.set(key, res.status === 'fulfilled' ? res.value.price : 0);
+        });
+
+        const finalAssets = memoizedBalances.map((balance) => {
+          const key = balance.asset_issuer ? `${balance.asset_code}:${balance.asset_issuer}` : (balance.asset_code || 'XLM');
+          const priceUSD = priceMap.get(key) || 0;
+          const valueUSD = priceUSD * parseFloat(balance.balance);
+          return {
+            ...balance,
+            priceUSD,
+            valueUSD,
+            symbol: balance.asset_code || 'XLM'
+          };
+        });
+
+        // Sort by value and update
+        finalAssets.sort((a, b) => (b.valueUSD || 0) - (a.valueUSD || 0));
+        setAssetsWithPrices(finalAssets);
+        
+        // Update the fetch timestamp whenever we successfully get prices
+        setLastFetchTimestamp();
+        
+      } catch (error) {
+        setError('Failed to fetch asset prices');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchPrices();
-  }, [fetchPrices]);
+  }, [memoizedBalances]);
 
-  // Reduce refresh interval from 5 minutes to 10 minutes to minimize network calls
-  useEffect(() => {
-    if (!enabled || refreshInterval <= 0) return;
-
-    const interval = setInterval(fetchPrices, Math.max(refreshInterval, 10 * 60 * 1000)); // Min 10 minutes
-    return () => clearInterval(interval);
-  }, [fetchPrices, refreshInterval, enabled]);
+  // Memoize total value calculation
+  const totalValueUSD = useMemo(() => {
+    return assetsWithPrices.reduce((sum, asset) => {
+      // Only count assets that have finished loading (priceUSD >= 0)
+      return asset.priceUSD >= 0 ? sum + (asset.valueUSD || 0) : sum;
+    }, 0);
+  }, [assetsWithPrices]);
 
   return {
-    prices,
+    assetsWithPrices,
+    totalValueUSD,
     loading,
     error,
-    refresh,
-    getPrice,
-    getTotalValue
+    refetch
   };
 };
 
-// Hook for single asset price
-export const useAssetPrice = (
-  assetCode: string,
-  options: UseAssetPricesOptions = {}
-) => {
-  const result = useAssetPrices([assetCode], options);
+// Legacy compatibility hooks for existing code
+export const useAssetPrice = (assetCode: string) => {
+  const balances = [{ asset_type: 'native', asset_code: assetCode, balance: '0' }];
+  const result = useAssetPrices(balances);
   
   return {
-    price: result.getPrice(assetCode),
+    price: result.assetsWithPrices[0]?.priceUSD || 0,
     loading: result.loading,
     error: result.error,
-    refresh: result.refresh
+    refresh: result.refetch
   };
 };
 
-// Hook for portfolio total value
-export const usePortfolioValue = (
-  balances: Record<string, number>,
-  options: UseAssetPricesOptions = {}
-) => {
-  const assets = Object.keys(balances).filter(asset => balances[asset] > 0);
-  const result = useAssetPrices(assets, options);
+export const usePortfolioValue = (balances: Record<string, number>) => {
+  // Convert balances to AssetBalance format
+  const assetBalances = Object.entries(balances).map(([code, balance]) => ({
+    asset_type: code === 'XLM' ? 'native' : 'credit_alphanum4',
+    asset_code: code === 'XLM' ? undefined : code,
+    balance: balance.toString()
+  }));
+  
+  const result = useAssetPrices(assetBalances);
   
   return {
-    totalValue: result.getTotalValue(balances),
-    prices: result.prices,
+    totalValue: result.totalValueUSD,
+    prices: result.assetsWithPrices.reduce((acc, asset) => {
+      const key = asset.asset_code || 'XLM';
+      acc[key] = asset.priceUSD;
+      return acc;
+    }, {} as Record<string, number>),
     loading: result.loading,
     error: result.error,
-    refresh: result.refresh
+    refresh: result.refetch
   };
 };

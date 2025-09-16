@@ -87,3 +87,32 @@ export function formatFiatAmount(amount: number, currency: FiatCurrency): string
     return `${currency.symbol}${amount.toFixed(2)}`;
   }
 }
+
+/**
+ * Get FX rate for currency conversion (placeholder - would use oracle in real implementation)
+ */
+export const getFxRate = async (targetCurrency: string): Promise<number> => {
+  if (targetCurrency === 'USD') return 1;
+  
+  // Simple fallback rates for common currencies
+  const rates: Record<string, number> = {
+    'EUR': 0.85,
+    'GBP': 0.73,
+    'JPY': 110,
+    'CAD': 1.25,
+    'AUD': 1.35,
+    'CHF': 0.92,
+    'CNY': 6.45
+  };
+  
+  return rates[targetCurrency] || 1;
+};
+
+/**
+ * Convert an amount in USD to the target currency
+ */
+export const convertFromUSD = async (usdAmount: number, targetCurrency: string): Promise<number> => {
+  const rate = await getFxRate(targetCurrency);
+  if (!rate) return usdAmount; // fallback: return USD amount if no rate
+  return usdAmount / rate;
+};
