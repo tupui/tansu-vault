@@ -147,17 +147,30 @@ export async function getVaultTotalBalance(): Promise<string> {
       rpcUrl: config.sorobanRpcUrl,
     });
 
-    const result = await client.fetch_total_managed_funds();
-    const totalManagedFunds = result.result;
+    // Simulate the transaction to get the result
+    const assembledTx = await client.fetch_total_managed_funds();
+    const simulation = await assembledTx.simulate();
     
-    if (Array.isArray(totalManagedFunds) && totalManagedFunds.length > 0) {
-      // Get XLM amount (first asset)
-      const xlmAmount = totalManagedFunds[0].total_amount;
-      return (Number(xlmAmount) / 10_000_000).toString();
+    // Check if simulation was successful and decode the result
+    if ('result' in simulation && simulation.result) {
+      // Use the assembled transaction's result property which handles XDR decoding
+      const resultWrapper = assembledTx.result;
+      
+      // The result is wrapped in a Result type (Ok/Err), so we need to unwrap it
+      if (resultWrapper && resultWrapper.isOk && resultWrapper.isOk()) {
+        const totalManagedFunds = resultWrapper.unwrap();
+        
+        if (Array.isArray(totalManagedFunds) && totalManagedFunds.length > 0) {
+          // Get XLM amount (first asset)
+          const xlmAmount = totalManagedFunds[0].total_amount;
+          return (Number(xlmAmount) / 10_000_000).toString();
+        }
+      }
     }
     
     return "0";
   } catch (error) {
+    console.error('Failed to get vault total balance:', error);
     return "0";
   }
 }
@@ -180,12 +193,30 @@ export async function getVaultBalance(userAddress: string): Promise<string> {
       rpcUrl: config.sorobanRpcUrl,
     });
 
-    const result = await client.balance({ id: userAddress });
-    const shares = result.result;
+    // Simulate the transaction to get the result
+    const assembledTx = await client.balance({ id: userAddress });
+    const simulation = await assembledTx.simulate();
     
-    // Convert from i128 to readable amount (shares)
-    return (Number(shares) / 10_000_000).toString();
+    // Check if simulation was successful and decode the result
+    if ('result' in simulation && simulation.result) {
+      // Use the assembled transaction's result property which handles XDR decoding
+      const resultWrapper = assembledTx.result;
+      
+      // The result might be wrapped in a Result type, handle both cases
+      let shares;
+      if (resultWrapper && resultWrapper.isOk && resultWrapper.isOk()) {
+        shares = resultWrapper.unwrap();
+      } else {
+        shares = resultWrapper;
+      }
+      
+      // Convert from i128 to readable amount (shares)
+      return (Number(shares) / 10_000_000).toString();
+    }
+    
+    return "0";
   } catch (error) {
+    console.error('Failed to get user vault balance:', error);
     return "0";
   }
 }
