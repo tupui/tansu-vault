@@ -14,9 +14,31 @@ export const CurrencySelector = ({ disabled = false, compact = false }: Currency
 
   if (compact) {
     return (
-      <Badge variant="outline" className="text-xs font-mono">
-        {currentCurrency.symbol} {currentCurrency.code}
-      </Badge>
+      <Select
+        value={quoteCurrency}
+        onValueChange={setQuoteCurrency}
+        disabled={disabled}
+      >
+        <SelectTrigger className="w-[80px] h-8 text-xs bg-background/80 border-border/50">
+          <div className="flex items-center gap-1">
+            <span className="font-mono">{currentCurrency.symbol}</span>
+            <span className="font-medium">{currentCurrency.code}</span>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="bg-background border-border shadow-lg z-50">
+          {availableCurrencies.map((currency) => (
+            <SelectItem key={currency.code} value={currency.code}>
+              <div className="flex items-center gap-2">
+                <span className="font-mono w-6">{currency.symbol}</span>
+                <div>
+                  <div className="font-medium">{currency.code}</div>
+                  <div className="text-xs text-muted-foreground">{currency.name}</div>
+                </div>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   }
 
@@ -32,7 +54,7 @@ export const CurrencySelector = ({ disabled = false, compact = false }: Currency
           <span className="font-medium">{currentCurrency.code}</span>
         </div>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-background border-border shadow-lg z-50">
         {availableCurrencies.map((currency) => (
           <SelectItem key={currency.code} value={currency.code}>
             <div className="flex items-center gap-2">

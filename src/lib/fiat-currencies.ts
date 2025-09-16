@@ -46,11 +46,36 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
  */
 export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
   try {
-    // Temporarily return fallback currencies until we have proper contract integration
-    // The console shows RPC format errors with oracle calls
-    console.warn('Fiat currency oracle query temporarily disabled due to RPC format issues');
+    // Get all supported fiat currencies from FX Oracle
+    const { getAssetPrice } = await import('@/lib/reflector');
     
-    // Return commonly supported currencies as fallback
+    // Test a few major currencies to see what's available
+    const testCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'SEK', 'NZD', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'BRL', 'MXN', 'INR', 'KRW', 'SGD', 'HKD', 'TWD', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'ZAR'];
+    
+    const availableCurrencies: FiatCurrency[] = [];
+    
+    // Test which currencies are actually supported by trying to get a rate
+    for (const code of testCurrencies) {
+      try {
+        const rate = await getAssetPrice('XLM', code, network);
+        if (rate && rate > 0) {
+          availableCurrencies.push({
+            code,
+            symbol: CURRENCY_INFO[code]?.symbol || code,
+            name: CURRENCY_INFO[code]?.name || code,
+          });
+        }
+      } catch {
+        // Currency not supported, skip
+      }
+    }
+    
+    // If we found supported currencies, return them, otherwise use fallback
+    if (availableCurrencies.length > 0) {
+      return availableCurrencies.sort((a, b) => a.code.localeCompare(b.code));
+    }
+    
+    // Fallback to essential currencies
     return [
       { code: 'USD', symbol: '$', name: 'US Dollar' },
       { code: 'EUR', symbol: '€', name: 'Euro' },
@@ -58,24 +83,14 @@ export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' 
       { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
     ];
     
-    /* TODO: Fix RPC transaction format for oracle calls
-    const { getOracleClient } = await import('@/lib/reflector-client');
-    const oracleClient = getOracleClient(network);
-    const list: string[] = await oracleClient.listSupportedCurrencies();
-
-    return list
-      .map((code) => ({
-        code,
-        symbol: CURRENCY_INFO[code]?.symbol || code,
-        name: CURRENCY_INFO[code]?.name || code,
-      }))
-      .sort((a, b) => a.code.localeCompare(b.code));
-    */
   } catch (error) {
     console.error('Failed to load currencies from oracle:', error);
-    // Return minimal fallback without hardcoded pricing
+    // Return minimal fallback
     return [
-      { code: 'USD', symbol: '$', name: 'US Dollar' }
+      { code: 'USD', symbol: '$', name: 'US Dollar' },
+      { code: 'EUR', symbol: '€', name: 'Euro' },
+      { code: 'GBP', symbol: '£', name: 'British Pound' },
+      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
     ];
   }
 }

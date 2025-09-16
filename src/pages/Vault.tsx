@@ -4,14 +4,18 @@ import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProjectSearch } from '@/components/ProjectSearch';
 import { VaultOperations } from '@/components/VaultOperations';
+import { TransactionHistoryPanel } from '@/components/history/TransactionHistoryPanel';
 import { useWallet } from '@/hooks/useWallet';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { useProjectVault } from '@/hooks/useProjectVault';
 import { TansuProject } from '@/lib/tansu-contracts';
+import { Loader2 } from 'lucide-react';
 
 const Vault: React.FC = () => {
   const { isConnected, address } = useWallet();
   const { quoteCurrency } = useFiatCurrency();
+  const { formatFiatAmount } = useFiatConversion();
   const [selectedProject, setSelectedProject] = useState<TansuProject | null>(null);
   const [projectWalletAddress, setProjectWalletAddress] = useState<string | null>(null);
   
@@ -28,12 +32,10 @@ const Vault: React.FC = () => {
   };
 
   const fmt = (num: number | null) => num == null ? '0' : new Intl.NumberFormat().format(num);
-  const fmtFiat = (amount: number | null) => amount == null ? '-' : new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: quoteCurrency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  const fmtFiat = (amount: number | null) => {
+    if (amount == null || amount === 0) return '—';
+    return formatFiatAmount(amount);
+  };
 
   const canManageVault = selectedProject && isConnected && isMaintainer;
 
@@ -96,7 +98,7 @@ const Vault: React.FC = () => {
               <CardContent>
                 {projectVaultData.loading ? (
                   <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
                     <p className="text-muted-foreground mt-2">Loading vault data...</p>
                   </div>
                 ) : (
@@ -117,7 +119,9 @@ const Vault: React.FC = () => {
                           {fmt(projectVaultData.vaultBalance)} XLM
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {fmtFiat(projectVaultData.vaultBalance && projectVaultData.xlmFiatRate ? projectVaultData.vaultBalance * projectVaultData.xlmFiatRate : null)}
+                        {projectVaultData.vaultBalance && projectVaultData.xlmFiatRate ? 
+                          fmtFiat(projectVaultData.vaultBalance * projectVaultData.xlmFiatRate) : '—'
+                        }
                         </p>
                       </div>
                       <div>
@@ -126,7 +130,9 @@ const Vault: React.FC = () => {
                           {fmt(projectVaultData.walletBalance)} XLM
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {fmtFiat(projectVaultData.walletBalance && projectVaultData.xlmFiatRate ? projectVaultData.walletBalance * projectVaultData.xlmFiatRate : null)}
+                          {projectVaultData.walletBalance && projectVaultData.xlmFiatRate ? 
+                            fmtFiat(projectVaultData.walletBalance * projectVaultData.xlmFiatRate) : '—'
+                          }
                         </p>
                       </div>
                       <div className="pt-2 border-t">
@@ -175,19 +181,11 @@ const Vault: React.FC = () => {
               </Card>
             )}
 
-            {/* Recent Activity Placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Activity tracking coming soon...
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Recent Activity - Transaction History */}
+            <TransactionHistoryPanel 
+              accountAddress={projectWalletAddress}
+              className="mt-6"
+            />
           </div>
         ) : null}
       </div>
