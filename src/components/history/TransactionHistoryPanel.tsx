@@ -160,42 +160,6 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Total Transactions</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.totalIn.toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground">Total In (XLM)</div>
-            {stats.totalFiatIn > 0 && (
-              <div className="text-xs text-muted-foreground">
-                {formatFiatAmount(stats.totalFiatIn)}
-              </div>
-            )}
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.totalOut.toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground">Total Out (XLM)</div>
-            {stats.totalFiatOut > 0 && (
-              <div className="text-xs text-muted-foreground">
-                {formatFiatAmount(stats.totalFiatOut)}
-              </div>
-            )}
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">
-              {(stats.totalIn - stats.totalOut).toFixed(2)}
-            </div>
-            <div className="text-xs text-muted-foreground">Net (XLM)</div>
-            {(stats.totalFiatIn - stats.totalFiatOut) !== 0 && (
-              <div className="text-xs text-muted-foreground">
-                {formatFiatAmount(stats.totalFiatIn - stats.totalFiatOut)}
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Filters */}
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
