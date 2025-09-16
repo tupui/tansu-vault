@@ -258,16 +258,9 @@ const buildContractTransaction = async (
 };
 
 export const depositToVault = async (userAddress: string, amount: string): Promise<string> => {
-  try {
-    const { getDeFindexService } = await import('./defindex-service');
-    const defindexService = getDeFindexService('testnet');
-    
-    // Use exact Tansu pattern (simulate, prepare, sign, submit all in one)
-    const hash = await defindexService.deposit(userAddress, amount);
-    return hash;
-  } catch (error) {
-    throw new Error(`Deposit failed: ${error}`);
-  }
+  // Use simple Tansu-style function
+  const { depositToVault: deposit } = await import('./vault-transactions');
+  return await deposit(userAddress, amount);
 };
 
 export const withdrawFromVault = async (userAddress: string, xlmAmount: string, slippagePercent: number = 5): Promise<string> => {
@@ -287,27 +280,13 @@ export const withdrawFromVault = async (userAddress: string, xlmAmount: string, 
 };
 
 export const getVaultTotalBalance = async (): Promise<string> => {
-  try {
-    const { getDeFindexService } = await import('./defindex-service');
-    const defindexService = getDeFindexService('testnet');
-    
-    const vaultInfo = await defindexService.getVaultInfo();
-    return vaultInfo.totalManagedFunds;
-  } catch (error) {
-    return "0";
-  }
+  const { getVaultTotalBalance: getTotalBalance } = await import('./vault-transactions');
+  return await getTotalBalance();
 };
 
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
-  try {
-    const { getDeFindexService } = await import('./defindex-service');
-    const defindexService = getDeFindexService('testnet');
-    
-    const balance = await defindexService.getUserBalance(userAddress);
-    return balance.underlyingBalance;
-  } catch (error) {
-    return "0";
-  }
+  const { getVaultBalance: getBalance } = await import('./vault-transactions');
+  return await getBalance(userAddress);
 };
 
 // Pricing utilities using Reflector Network (always mainnet for accurate rates)
