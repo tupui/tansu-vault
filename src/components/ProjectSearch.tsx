@@ -52,14 +52,15 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
     setResolvingAddress(project.id);
     
     try {
-      // Resolve the domain to get the wallet address
-      const walletAddress = await resolveSorobanDomain(project.domain, network);
+      // Resolve the domain to get the wallet address (use project name per Tansu spec)
+      const domainInput = (project.name || '').trim();
+      const walletAddress = await resolveSorobanDomain(domainInput, network);
       
       if (!walletAddress) {
         toast({
           variant: 'destructive',
           title: 'Domain Resolution Failed',
-          description: `Could not resolve ${project.domain} to a wallet address.`,
+          description: `Could not resolve ${domainInput} to a wallet address.`,
         });
         return;
       }
