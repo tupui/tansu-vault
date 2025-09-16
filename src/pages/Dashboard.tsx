@@ -5,20 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { VaultStats } from '@/components/VaultStats';
 import { useVaultTVL } from '@/hooks/useVaultTVL';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-
 const Dashboard: React.FC = () => {
-  const { quoteCurrency } = useFiatCurrency();
-  const { totalXlm, loading: tvlLoading } = useVaultTVL();
-
+  const {
+    quoteCurrency
+  } = useFiatCurrency();
+  const {
+    totalXlm,
+    loading: tvlLoading
+  } = useVaultTVL();
   const fmtFiat = (amount: number) => new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: quoteCurrency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
-
-  return (
-    <Layout>
+  return <Layout>
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col space-y-2">
@@ -37,21 +38,17 @@ const Dashboard: React.FC = () => {
             <CardTitle>Total Value Locked (TVL)</CardTitle>
           </CardHeader>
           <CardContent>
-            {tvlLoading ? (
-              <div className="text-center py-8">
+            {tvlLoading ? <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 <p className="text-muted-foreground mt-2">Loading TVL data...</p>
-              </div>
-            ) : (
-              <div className="text-center py-6">
+              </div> : <div className="text-center py-6">
                 <p className="text-3xl font-bold text-foreground mb-2">
                   {new Intl.NumberFormat().format(totalXlm || 0)} XLM
                 </p>
                 <p className="text-muted-foreground text-lg">
                   {fmtFiat((totalXlm || 0) * 0.12)} {/* Placeholder XLM price */}
                 </p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
 
@@ -95,44 +92,8 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Getting Started */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Get Started</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">For Project Maintainers</h3>
-                <p className="text-muted-foreground mb-3">
-                  Manage your project's treasury vault and optimize yields.
-                </p>
-                <a 
-                  href="/vault" 
-                  className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
-                >
-                  Access Vault Management →
-                </a>
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Learn More</h3>
-                <p className="text-muted-foreground mb-3">
-                  Discover how Tansu helps Stellar projects optimize their treasury.
-                </p>
-                <a 
-                  href="https://tansu.domains" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-primary hover:text-primary/80 font-medium"
-                >
-                  Visit Tansu.domains →
-                </a>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Dashboard;
