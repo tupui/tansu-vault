@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,14 +10,16 @@ import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { useFiatConversion } from '@/hooks/useFiatConversion';
 import { useProjectVault } from '@/hooks/useProjectVault';
 import { TansuProject } from '@/lib/tansu-contracts';
+import { fetchTansuMetadata, extractLogoUrl } from '@/lib/ipfs-utils';
 import { Loader2 } from 'lucide-react';
 
 const Vault: React.FC = () => {
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, isDomainConnected, connectedDomain } = useWallet();
   const { quoteCurrency } = useFiatCurrency();
   const { formatFiatAmount } = useFiatConversion();
   const [selectedProject, setSelectedProject] = useState<TansuProject | null>(null);
   const [projectWalletAddress, setProjectWalletAddress] = useState<string | null>(null);
+  const [projectLogo, setProjectLogo] = useState<string | null>(null);
   
   const projectVaultData = useProjectVault(selectedProject, projectWalletAddress, address);
 
@@ -31,13 +33,35 @@ const Vault: React.FC = () => {
     setProjectWalletAddress(walletAddress);
   };
 
+  // Fetch project logo from IPFS when project is selected
+  useEffect(() => {
+    const fetchLogo = async () => {
+      if (!selectedProject?.ipfs_hash) {
+        setProjectLogo(null);
+        return;
+      }
+
+      try {
+        const metadata = await fetchTansuMetadata(selectedProject.ipfs_hash);
+        const logoUrl = extractLogoUrl(metadata);
+        setProjectLogo(logoUrl);
+      } catch (error) {
+        console.warn('Failed to fetch project logo:', error);
+        setProjectLogo(null);
+      }
+    };
+
+    fetchLogo();
+  }, [selectedProject?.ipfs_hash]);
+
   const fmt = (num: number | null) => num == null ? '0' : new Intl.NumberFormat().format(num);
   const fmtFiat = (amount: number | null) => {
     if (amount == null || amount === 0) return '—';
     return formatFiatAmount(amount);
   };
 
-  const canManageVault = selectedProject && isConnected && isMaintainer;
+  const canManageVault = selectedProject && isConnected && isMaintainer && isDomainConnected && 
+    connectedDomain === selectedProject.domain;
 
   return (
     <Layout>
@@ -53,43 +77,47 @@ const Vault: React.FC = () => {
           </p>
         </div>
 
-        {selectedProject ? (
-          <Card className="border-success/50 bg-success/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 bg-success rounded-full"></div>
-                    <span className="font-medium text-success">Connected to Project</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground">{selectedProject.name}</h3>
-                  <p className="text-muted-foreground">{selectedProject.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Domain</p>
-                  <p className="font-mono text-sm">{selectedProject.domain}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        {!selectedProject ? (
           <ProjectSearch 
             onProjectSelect={handleProjectSelect}
             selectedProject={selectedProject}
           />
-        )}
-
-        {selectedProject ? (
+        ) : (
           <div className="space-y-6">
+            {/* Project Header */}
+            <div className="flex items-center gap-4 p-6 bg-accent/20 rounded-lg border border-accent/50">
+              {projectLogo && (
+                <img 
+                  src={projectLogo} 
+                  alt={`${selectedProject.name} logo`}
+                  className="w-16 h-16 rounded-lg object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-foreground">{selectedProject.name}</h2>
+                <p className="text-muted-foreground">{selectedProject.description}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <span className="font-mono">{selectedProject.domain}</span>
+                </p>
+              </div>
+            </div>
+
             {/* Vault Balance */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Treasury - {selectedProject.name}</span>
+                  <span>Treasury Balance</span>
                   {projectVaultData.loading ? (
                     <span className="text-sm text-muted-foreground">Loading...</span>
+                  ) : canManageVault ? (
+                    <span className="text-sm text-green-600 font-medium">✓ Domain Connected</span>
+                  ) : isMaintainer && !isDomainConnected ? (
+                    <span className="text-sm text-orange-600 font-medium">⚠ Connect via Domain</span>
                   ) : isMaintainer ? (
-                    <span className="text-sm text-green-600 font-medium">✓ Maintainer Access</span>
+                    <span className="text-sm text-red-600 font-medium">✗ Wrong Domain</span>
                   ) : isConnected ? (
                     <span className="text-sm text-red-600 font-medium">✗ No Access</span>
                   ) : null}
@@ -135,10 +163,6 @@ const Vault: React.FC = () => {
                           }
                         </p>
                       </div>
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground">Project: {selectedProject.domain}</p>
-                        <p className="text-xs text-muted-foreground">{selectedProject.description}</p>
-                      </div>  
                     </div>
                   </div>
                 )}
@@ -154,14 +178,17 @@ const Vault: React.FC = () => {
             )}
 
             {/* Access Required Message */}
-            {selectedProject && isConnected && !isMaintainer && !projectVaultData.loading && (
+            {selectedProject && isConnected && !canManageVault && !projectVaultData.loading && (
               <Card>
                 <CardContent className="py-8 text-center">
                   <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                    Access Required
+                    {!isMaintainer ? 'Access Required' : 'Domain Connection Required'}
                   </h3>
                   <p className="text-muted-foreground">
-                    You need to be a maintainer of this project to manage its vault.
+                    {!isMaintainer 
+                      ? 'You need to be a maintainer of this project to manage its vault.'
+                      : `Connect your wallet via the project's Soroban domain (${selectedProject.domain}) to manage the vault.`
+                    }
                   </p>
                 </CardContent>
               </Card>
@@ -187,7 +214,7 @@ const Vault: React.FC = () => {
               className="mt-6"
             />
           </div>
-        ) : null}
+        )}
       </div>
     </Layout>
   );

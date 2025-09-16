@@ -21,7 +21,10 @@ interface WalletContextType {
   isLoading: boolean;
   error: string | null;
   balances: any[];
+  isDomainConnected: boolean;
+  connectedDomain: string | null;
   connect: (walletId: string) => Promise<void>;
+  connectViaDomain: (walletId: string, domain: string) => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
 }
@@ -43,6 +46,8 @@ export const useWalletState = (): WalletContextType => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<any[]>([]);
+  const [isDomainConnected, setIsDomainConnected] = useState(false);
+  const [connectedDomain, setConnectedDomain] = useState<string | null>(null);
 
   const { network } = useNetwork();
 
@@ -50,9 +55,10 @@ export const useWalletState = (): WalletContextType => {
 
   // Initialize wallet kit and restore connection
   useEffect(() => {
-    const restoreConnection = async () => {
+  const restoreConnection = async () => {
       const savedAddress = localStorage.getItem('tansu_wallet_address');
       const savedWalletId = localStorage.getItem('tansu_wallet_id');
+      const savedDomain = localStorage.getItem('tansu_connected_domain');
       
       if (savedAddress && savedWalletId) {
         try {
@@ -66,12 +72,15 @@ export const useWalletState = (): WalletContextType => {
           
           // Restore the address without triggering a new connection
           setAddress(savedAddress);
+          setIsDomainConnected(!!savedDomain);
+          setConnectedDomain(savedDomain);
           await refreshBalances(savedAddress);
         } catch (error) {
           console.warn('Failed to restore wallet connection:', error);
           // Clear invalid saved data
           localStorage.removeItem('tansu_wallet_address');
           localStorage.removeItem('tansu_wallet_id');
+          localStorage.removeItem('tansu_connected_domain');
         }
       }
     };
@@ -100,8 +109,33 @@ export const useWalletState = (): WalletContextType => {
       const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
       const connectedAddress = await connectWallet(walletId, targetNetwork);
       setAddress(connectedAddress);
+      setIsDomainConnected(false);
+      setConnectedDomain(null);
       localStorage.setItem('tansu_wallet_address', connectedAddress);
       localStorage.setItem('tansu_wallet_id', walletId);
+      localStorage.removeItem('tansu_connected_domain');
+      await refreshBalances(connectedAddress);
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect wallet');
+      console.error('Wallet connection error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const connectViaDomain = async (walletId: string, domain: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+      const connectedAddress = await connectWallet(walletId, targetNetwork);
+      setAddress(connectedAddress);
+      setIsDomainConnected(true);
+      setConnectedDomain(domain);
+      localStorage.setItem('tansu_wallet_address', connectedAddress);
+      localStorage.setItem('tansu_wallet_id', walletId);
+      localStorage.setItem('tansu_connected_domain', domain);
       await refreshBalances(connectedAddress);
     } catch (err: any) {
       setError(err.message || 'Failed to connect wallet');
@@ -115,8 +149,11 @@ export const useWalletState = (): WalletContextType => {
     setAddress(null);
     setBalances([]);
     setError(null);
+    setIsDomainConnected(false);
+    setConnectedDomain(null);
     localStorage.removeItem('tansu_wallet_address');
     localStorage.removeItem('tansu_wallet_id');
+    localStorage.removeItem('tansu_connected_domain');
   };
 
   const refreshBalances = async (walletAddress?: string) => {
@@ -138,7 +175,10 @@ export const useWalletState = (): WalletContextType => {
     isLoading,
     error,
     balances,
+    isDomainConnected,
+    connectedDomain,
     connect,
+    connectViaDomain,
     disconnect,
     refreshBalances,
   };

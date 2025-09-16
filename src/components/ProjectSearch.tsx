@@ -72,6 +72,7 @@ export const ProjectSearch = ({ onProjectSelect, selectedProject }: ProjectSearc
       try {
         localStorage.setItem('selectedProject', JSON.stringify(project));
         localStorage.setItem('selectedProjectWalletAddress', walletAddress);
+        localStorage.setItem('selectedProjectDomain', project.domain);
       } catch {}
       
       toast({

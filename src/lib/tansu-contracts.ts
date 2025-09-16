@@ -12,6 +12,9 @@ export interface TansuProject {
   maintainers: string[];
   created_at: number;
   status: 'active' | 'inactive';
+  ipfs_hash?: string;
+  metadata_url?: string;
+  logo?: string;
 }
 
 

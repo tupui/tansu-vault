@@ -23,9 +23,7 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
-  Loader2,
-  Eye,
-  EyeOff
+  Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAccountHistory } from '@/hooks/useAccountHistory';
@@ -70,7 +68,6 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
   const { getCurrentCurrency } = useFiatCurrency();
   const { formatFiatAmount } = useFiatConversion();
   const [showFilters, setShowFilters] = useState(false);
-  const [showFiatValues, setShowFiatValues] = useState(true);
   
   const {
     transactions,
@@ -114,8 +111,6 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
   };
 
   const formatFiatValue = (txId: string) => {
-    if (!showFiatValues) return null;
-    
     const fiatAmount = fiatAmounts.get(txId);
     if (!fiatAmount || fiatAmount === 0) return null;
     
@@ -143,15 +138,6 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFiatValues(!showFiatValues)}
-              className="flex items-center gap-2"
-            >
-              {showFiatValues ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              {currentCurrency.code}
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -183,7 +169,7 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">{stats.totalIn.toFixed(2)}</div>
             <div className="text-xs text-muted-foreground">Total In (XLM)</div>
-            {showFiatValues && stats.totalFiatIn > 0 && (
+            {stats.totalFiatIn > 0 && (
               <div className="text-xs text-muted-foreground">
                 {formatFiatAmount(stats.totalFiatIn)}
               </div>
@@ -192,7 +178,7 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">{stats.totalOut.toFixed(2)}</div>
             <div className="text-xs text-muted-foreground">Total Out (XLM)</div>
-            {showFiatValues && stats.totalFiatOut > 0 && (
+            {stats.totalFiatOut > 0 && (
               <div className="text-xs text-muted-foreground">
                 {formatFiatAmount(stats.totalFiatOut)}
               </div>
@@ -203,7 +189,7 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
               {(stats.totalIn - stats.totalOut).toFixed(2)}
             </div>
             <div className="text-xs text-muted-foreground">Net (XLM)</div>
-            {showFiatValues && (stats.totalFiatIn - stats.totalFiatOut) !== 0 && (
+            {(stats.totalFiatIn - stats.totalFiatOut) !== 0 && (
               <div className="text-xs text-muted-foreground">
                 {formatFiatAmount(stats.totalFiatIn - stats.totalFiatOut)}
               </div>
@@ -394,15 +380,13 @@ export const TransactionHistoryPanel: React.FC<TransactionHistoryPanelProps> = (
                 <div className="font-medium">
                   {formatTransactionAmount(tx)}
                 </div>
-                {showFiatValues && (
-                  <div className="text-sm text-muted-foreground">
-                    {fiatLoading ? (
-                      <Loader2 className="w-3 h-3 animate-spin inline" />
-                    ) : (
-                      formatFiatValue(tx.id) || '—'
-                    )}
-                  </div>
-                )}
+                <div className="text-sm text-muted-foreground">
+                  {fiatLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin inline" />
+                  ) : (
+                    formatFiatValue(tx.id) || '—'
+                  )}
+                </div>
               </div>
             </div>
           ))}

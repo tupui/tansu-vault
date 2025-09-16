@@ -28,7 +28,7 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, isDomainConnected, connectedDomain } = useWallet();
   const { toast } = useToast();
   const { formatFiatAmount } = useFiatConversion();
 
@@ -129,6 +129,32 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
           <p className="text-muted-foreground text-center py-8">
             Please connect your Stellar wallet to access vault operations
           </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isDomainConnected) {
+    return (
+      <Card className="glass border-border/50">
+        <CardHeader>
+          <CardTitle>Vault Operations</CardTitle>
+          <CardDescription>
+            Domain connection required for vault operations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-2">
+              You must connect via the project's Soroban domain to perform vault operations.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {connectedDomain ? 
+                `Currently connected via: ${connectedDomain}` : 
+                'No domain connection detected'
+              }
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
