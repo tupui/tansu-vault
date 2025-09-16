@@ -183,6 +183,8 @@ const Vault: React.FC = () => {
               <VaultOperations 
                 userBalance={(projectVaultData.walletBalance || 0).toString()}
                 vaultBalance={(projectVaultData.vaultBalance || 0).toString()}
+                canManageVault={canManageVault}
+                projectWalletAddress={projectWalletAddress}
               />
             )}
 

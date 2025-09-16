@@ -14,12 +14,16 @@ import { useFiatConversion } from '@/hooks/useFiatConversion';
 interface VaultOperationsProps {
   userBalance?: string;
   vaultBalance?: string;
+  canManageVault?: boolean;
+  projectWalletAddress?: string | null;
   onOperationComplete?: () => void;
 }
 
 export const VaultOperations: React.FC<VaultOperationsProps> = ({
   userBalance = '0',
   vaultBalance = '0',
+  canManageVault = false,
+  projectWalletAddress,
   onOperationComplete
 }) => {
   const [depositAmount, setDepositAmount] = useState('');
@@ -116,44 +120,36 @@ export const VaultOperations: React.FC<VaultOperationsProps> = ({
     }
   };
 
-  if (!isConnected) {
+  if (!canManageVault) {
     return (
       <Card className="glass border-border/50">
         <CardHeader>
           <CardTitle>Vault Operations</CardTitle>
           <CardDescription>
-            Connect your wallet to deposit and withdraw funds
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-8">
-            Please connect your Stellar wallet to access vault operations
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!isDomainConnected) {
-    return (
-      <Card className="glass border-border/50">
-        <CardHeader>
-          <CardTitle>Vault Operations</CardTitle>
-          <CardDescription>
-            Domain connection required for vault operations
+            {!isConnected ? 'Connect your wallet to access vault operations' : 'Access required for vault operations'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-muted-foreground mb-2">
-              You must connect via the project's Soroban domain to perform vault operations.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {connectedDomain ? 
-                `Currently connected via: ${connectedDomain}` : 
-                'No domain connection detected'
-              }
-            </p>
+            {!isConnected ? (
+              <p className="text-muted-foreground">
+                Please connect your Stellar wallet to access vault operations
+              </p>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-2">
+                  You need maintainer access and must connect via the project's Soroban domain or use the project wallet address directly.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {connectedDomain ? 
+                    `Currently connected via: ${connectedDomain}` : 
+                    address === projectWalletAddress ? 
+                      'Connected with project wallet address' :
+                      'No domain connection detected'
+                  }
+                </p>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
