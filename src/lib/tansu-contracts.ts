@@ -21,11 +21,25 @@ export interface TansuProject {
  */
 export async function searchTansuProjects(query: string, network: 'mainnet' | 'testnet' = 'testnet'): Promise<TansuProject[]> {
   try {
-    // Use the new service-based approach from soroban-contract-services.ts
     const { createProjectService } = await import('./soroban-contract-services');
     const projectService = createProjectService(network);
     
-    const projects = await projectService.searchProjects(query);
+    let projects: any[] = [];
+
+    // 1) Try direct lookup first (ID or domain)
+    try {
+      const maybe = await projectService.getProject(query);
+      if (maybe) {
+        projects = [maybe];
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) If nothing found, skip calling non-existent search function and return []
+    if (projects.length === 0) {
+      return [];
+    }
     
     // Convert to our interface format
     const mappedProjects = projects.map((project: any) => ({
@@ -41,8 +55,8 @@ export async function searchTansuProjects(query: string, network: 'mainnet' | 't
     
     return mappedProjects;
   } catch (error) {
-    console.error('Failed to search Tansu projects:', error);
-    throw (error instanceof Error) ? error : new Error('Search failed');
+    console.warn('Search unavailable or failed:', error);
+    return [];
   }
 }
 

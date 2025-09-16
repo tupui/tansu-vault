@@ -140,8 +140,8 @@ export class TansuProjectContractService {
       
       return [];
     } catch (error) {
-      console.error('Failed to search projects:', error);
-      throw error;
+      console.warn('Failed to search projects:', error);
+      return [];
     }
   }
 
