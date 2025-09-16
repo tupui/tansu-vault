@@ -117,17 +117,6 @@ const Vault: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Treasury Balance</span>
-                  {projectVaultData.loading ? (
-                    <span className="text-sm text-muted-foreground">Loading...</span>
-                  ) : canManageVault ? (
-                    <span className="text-sm text-green-600 font-medium">
-                      ✓ {address === projectWalletAddress ? 'Address Connected' : 'Domain Connected'}
-                    </span>
-                  ) : isMaintainer ? (
-                    <span className="text-sm text-red-600 font-medium">✗ Wrong Domain</span>
-                  ) : isConnected ? (
-                    <span className="text-sm text-red-600 font-medium">✗ No Access</span>
-                  ) : null}
                 </CardTitle>
               </CardHeader>
               <CardContent>
