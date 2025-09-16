@@ -1,5 +1,6 @@
 import { Server as SorobanServer } from '@stellar/stellar-sdk/rpc';
 import { Contract, Address, scValToNative, nativeToScVal, xdr, TransactionBuilder, Account } from '@stellar/stellar-sdk';
+import { Buffer } from 'buffer';
 import { getNetworkConfig } from './appConfig';
 
 /**
@@ -124,10 +125,13 @@ export class TansuProjectContractService {
    */
   async getProject(identifier: string): Promise<any | null> {
     try {
+      const { computeTansuProjectKey } = await import('./hash');
+      const projectKey = computeTansuProjectKey(identifier);
+
       const contract = new Contract(this.contractId);
-      const identifierParam = nativeToScVal(identifier, { type: 'string' });
+      const keyParam = nativeToScVal(Buffer.from(projectKey), { type: 'bytes' });
       
-      const operation = contract.call('get_project', identifierParam);
+      const operation = contract.call('get_project', keyParam);
       const source = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
       const transaction = new TransactionBuilder(source, {
         fee: '100',
@@ -194,8 +198,11 @@ export class TansuProjectContractService {
    */
   async isMaintainer(projectId: string, address: string): Promise<boolean> {
     try {
+      const { computeTansuProjectKey } = await import('./hash');
+      const key = computeTansuProjectKey(projectId);
+
       const contract = new Contract(this.contractId);
-      const projectParam = nativeToScVal(projectId, { type: 'string' });
+      const projectParam = nativeToScVal(Buffer.from(key), { type: 'bytes' });
       const addressParam = nativeToScVal(Address.fromString(address));
       
       const operation = contract.call('is_maintainer', projectParam, addressParam);
