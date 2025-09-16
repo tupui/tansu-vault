@@ -43,7 +43,7 @@ export const NETWORK_DETAILS = {
   MAINNET: {
     network: Networks.PUBLIC,
     horizonUrl: 'https://horizon.stellar.org',  
-    rpcUrl: 'https://soroban.stellar.org',
+    rpcUrl: 'https://mainnet.sorobanrpc.com',
     walletNetwork: WalletNetwork.PUBLIC,
   },
 } as const;
@@ -154,12 +154,33 @@ export const getWalletAddress = async () => {
   return address;
 };
 
-export const signTransaction = async (xdr: string) => {
+export const signTransaction = async (tx: any) => {
   const kit = getWalletKit();
-  const { signedTxXdr } = await kit.signTransaction(xdr, {
-    networkPassphrase: NETWORK_DETAILS[currentNetwork].network
-  });
-  return signedTxXdr;
+  const networkPassphrase = NETWORK_DETAILS[currentNetwork].network;
+
+  // Prefer passing a Transaction object to satisfy wallets that expect it
+  const txObj = typeof tx === 'string'
+    ? TransactionBuilder.fromXDR(tx, networkPassphrase)
+    : tx;
+
+  try {
+    const { signedTxXdr } = await kit.signTransaction(txObj, {
+      networkPassphrase,
+    });
+    return signedTxXdr;
+  } catch (primaryError) {
+    // Fallback: some wallets expect a raw XDR string
+    try {
+      const xdrString = typeof tx === 'string' ? tx : txObj.toXDR();
+      const { signedTxXdr } = await kit.signTransaction(xdrString, {
+        networkPassphrase,
+      });
+      return signedTxXdr;
+    } catch (secondaryError) {
+      console.error('Failed to sign transaction (both object and XDR attempts):', secondaryError);
+      throw secondaryError;
+    }
+  }
 };
 
 // Account utilities

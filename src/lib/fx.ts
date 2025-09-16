@@ -5,16 +5,45 @@ import { getCurrentXlmUsdRate } from './kraken';
  * Get USD to fiat exchange rate using proper Reflector engine (always mainnet for accurate rates)
  */
 export async function getUsdFxRate(toCurrency: string, network?: 'mainnet' | 'testnet'): Promise<number> {
-  if (toCurrency === 'USD') return 1;
+  const target = (toCurrency || 'USD').toUpperCase();
+  if (target === 'USD') return 1;
   
+  // Try Reflector engine first (always mainnet for pricing)
   try {
-    const engine = getPriceEngine('mainnet'); // Always use mainnet for pricing
-    const rate = await engine.getPrice('USD', toCurrency);
-    return rate && rate > 0 ? rate : 1;
+    const engine = getPriceEngine('mainnet');
+    const rate = await engine.getPrice('USD', target);
+    if (rate && rate > 0) return rate;
   } catch (error) {
-    console.warn(`Failed to get FX rate for USD to ${toCurrency}:`, error);
-    return 1; // Fallback to 1:1 rate
+    console.warn(`Reflector FX rate failed USD->${target}:`, error);
   }
+
+  // Public API fallback with simple in-memory cache (15 minutes)
+  try {
+    const cacheKey = `fx_USD_${target}`;
+    const now = Date.now();
+    // Persist across HMR by attaching to globalThis
+    const g: any = globalThis as any;
+    g.__fxCache = g.__fxCache || new Map<string, { r: number; t: number }>();
+    const cached = g.__fxCache.get(cacheKey);
+    if (cached && now - cached.t < 15 * 60_000) {
+      return cached.r;
+    }
+
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    if (res.ok) {
+      const data = await res.json();
+      const r = data?.rates?.[target];
+      if (typeof r === 'number' && r > 0) {
+        g.__fxCache.set(cacheKey, { r, t: now });
+        return r;
+      }
+    }
+  } catch (fallbackError) {
+    console.warn(`Public FX fallback failed USD->${target}:`, fallbackError);
+  }
+  
+  // Final fallback
+  return 1;
 }
 
 /**
