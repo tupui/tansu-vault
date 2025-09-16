@@ -575,9 +575,6 @@ export class DeFindexVaultService {
       // Convert amount to ScVal format
       const amountScVal = nativeToScVal(amountI128, { type: 'i128' });
       
-      // Use dummy account for simulation (prepareTransaction will update with correct sequence)
-      const sourceAccount = new Account(userAddress, '0');
-      
       // Create a simple deposit call
       // DeFindex deposit function signature:
       // fn deposit(amounts_desired: vec<i128>, amounts_min: vec<i128>, from: address, invest: bool)
@@ -589,25 +586,36 @@ export class DeFindexVaultService {
         nativeToScVal(true, { type: 'bool' }) // invest
       );
 
-      const transaction = new TransactionBuilder(sourceAccount, {
-        fee: '100',
+      // Build transaction exactly like Tansu does for XLM payments
+      // Fetch the account details from Horizon (exact Tansu pattern)
+      const horizonUrl = 'https://horizon-testnet.stellar.org';
+      const accountResp = await fetch(
+        `${horizonUrl}/accounts/${userAddress}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!accountResp.ok) {
+        throw new Error(`Failed to load account: ${accountResp.status}`);
+      }
+      const accountJson = await accountResp.json();
+      const account = new Account(userAddress, accountJson.sequence);
+
+      const transaction = new TransactionBuilder(account, {
+        fee: '100000', // Higher fee for Soroban
         networkPassphrase: this.networkPassphrase,
       })
         .addOperation(operation)
         .setTimeout(30)
         .build();
 
-      // Simulate first
-      const simulation = await this.rpcServer.simulateTransaction(transaction);
-      if (SorobanRpc.isSimulationError(simulation)) {
-        console.error('Deposit simulation error:', JSON.stringify(simulation.error, null, 2));
-        throw new Error(`Deposit simulation failed: ${JSON.stringify(simulation.error)}`);
-      }
+      // Sign the transaction using wallet kit (exact Tansu pattern)
+      const { getWalletKit } = await import('./stellar');
+      const kit = getWalletKit();
+      const { signedTxXdr } = await kit.signTransaction(transaction.toXDR());
 
-      console.log('Deposit simulation successful:', JSON.stringify(simulation.result, null, 2));
-
-      // Return the transaction XDR for signing (simple working pattern)
-      return transaction.toXDR();
+      // Submit using exact Tansu pattern
+      const { sendSignedTransaction } = await import('./tansu-tx-service');
+      const result = await sendSignedTransaction(signedTxXdr);
+      return result.hash || result;
     } catch (error) {
       console.error('Deposit error details:', error);
       throw new Error(`Deposit failed: ${error}`);

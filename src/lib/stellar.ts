@@ -262,14 +262,8 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
     const { getDeFindexService } = await import('./defindex-service');
     const defindexService = getDeFindexService('testnet');
     
-    // Step 1: Get unsigned transaction XDR (includes simulation)
-    const unsignedXdr = await defindexService.deposit(userAddress, amount);
-    
-    // Step 2: Sign the transaction using the wallet
-    const signedXdr = await signTransaction(unsignedXdr);
-    
-    // Step 3: Submit the signed transaction
-    const hash = await defindexService.submitTransaction(signedXdr);
+    // Use exact Tansu pattern (simulate, prepare, sign, submit all in one)
+    const hash = await defindexService.deposit(userAddress, amount);
     return hash;
   } catch (error) {
     throw new Error(`Deposit failed: ${error}`);
