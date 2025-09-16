@@ -60,9 +60,9 @@ const Vault: React.FC = () => {
     return formatFiatAmount(amount);
   };
 
-  const canManageVault = selectedProject && isConnected && isMaintainer && (
-    (isDomainConnected && connectedDomain === selectedProject.domain) ||
-    (address === projectWalletAddress) // Allow if wallet address matches project address
+  const canManageVault = selectedProject && isConnected && (
+    (address && projectWalletAddress && address === projectWalletAddress) ||
+    (isMaintainer && isDomainConnected && connectedDomain === selectedProject.domain)
   );
 
   return (
