@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetBalancePanel } from '@/components/AssetBalancePanel';
-import { useAssetPrice, useAssetPrices } from '@/hooks/useAssetPrices';
+import { useAssetPrice, useMultipleAssetPrices } from '@/hooks/useAssetPrices';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { RefreshCw, TrendingUp, Activity, Zap } from 'lucide-react';
@@ -33,7 +33,7 @@ export const AssetPricing: React.FC = () => {
   const { price: testPrice, loading: testLoading, error: testError, refresh: refreshTest } = useAssetPrice(testAsset);
 
   // Test multiple asset prices
-  const { prices, loading: pricesLoading, error: pricesError, refresh: refreshPrices } = useAssetPrices(SAMPLE_ASSETS);
+  const { prices, loading: pricesLoading, error: pricesError, refresh: refreshPrices } = useMultipleAssetPrices(SAMPLE_ASSETS);
 
   const formatPrice = (price: number): string => {
     if (price === 0) return 'N/A';

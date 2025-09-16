@@ -174,25 +174,48 @@ export const useAssetPrice = (assetCode: string) => {
   };
 };
 
-export const usePortfolioValue = (balances: Record<string, number>) => {
-  // Convert balances to AssetBalance format
-  const assetBalances = Object.entries(balances).map(([code, balance]) => ({
-    asset_type: code === 'XLM' ? 'native' : 'credit_alphanum4',
-    asset_code: code === 'XLM' ? undefined : code,
-    balance: balance.toString()
-  }));
-  
-  const result = useAssetPrices(assetBalances);
-  
+export const useMultipleAssetPrices = (assetCodes: string[]) => {
+  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const pricePromises = assetCodes.map(async (asset) => {
+        try {
+          const price = await getAssetPrice(asset);
+          return { asset, price };
+        } catch {
+          return { asset, price: 0 };
+        }
+      });
+
+      const results = await Promise.all(pricePromises);
+      const priceMap = results.reduce((acc, { asset, price }) => {
+        acc[asset] = price;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      setPrices(priceMap);
+      setLastFetchTimestamp();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch asset prices');
+    } finally {
+      setLoading(false);
+    }
+  }, [assetCodes]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
   return {
-    totalValue: result.totalValueUSD,
-    prices: result.assetsWithPrices.reduce((acc, asset) => {
-      const key = asset.asset_code || 'XLM';
-      acc[key] = asset.priceUSD;
-      return acc;
-    }, {} as Record<string, number>),
-    loading: result.loading,
-    error: result.error,
-    refresh: result.refetch
+    prices,
+    loading,
+    error,
+    refresh
   };
 };
