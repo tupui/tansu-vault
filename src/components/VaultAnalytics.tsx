@@ -34,9 +34,8 @@ export const VaultAnalytics: React.FC<VaultAnalyticsProps> = ({ className }) => 
       setLoading(true);
       setError(null);
       
-      // Get basic vault information that we know works
-      const { getDeFindexService } = await import('@/lib/defindex-service');
-      const defindexService = getDeFindexService('testnet');
+      // Use DeFindex contract bindings for vault data
+      const { getVaultTotalBalance } = await import('@/lib/vault-transactions');
       
       // Get basic vault info with error handling for each call
       const analytics = {
@@ -83,20 +82,18 @@ export const VaultAnalytics: React.FC<VaultAnalyticsProps> = ({ className }) => 
         }
       };
 
-      // Try to get real data, but don't fail if it doesn't work
+      // Try to get real vault data using contract bindings, but don't fail if it doesn't work
       try {
-        const vaultInfo = await defindexService.getVaultInfo();
-        analytics.overview = { ...analytics.overview, ...vaultInfo };
+        const totalManagedFunds = await getVaultTotalBalance();
+        analytics.stats.totalValueLocked = totalManagedFunds;
+        analytics.overview.totalManagedFunds = totalManagedFunds;
+        analytics.performance.currentValue = totalManagedFunds;
       } catch (err) {
-        console.warn('Failed to get vault info:', err);
+        console.warn('Failed to get vault total balance:', err);
       }
 
-      try {
-        const totalSupply = await defindexService.getTotalSupply();
-        analytics.stats.totalShares = totalSupply;
-      } catch (err) {
-        console.warn('Failed to get total supply:', err);
-      }
+      // Note: Other vault info like total supply, share price, etc. would need 
+      // additional contract binding calls, but for now we focus on the main TVL
 
       setAnalytics(analytics);
     } catch (err) {

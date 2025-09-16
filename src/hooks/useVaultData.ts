@@ -43,7 +43,8 @@ export const useVaultData = (): VaultData => {
         const native = balances.find((b: any) => b.asset_type === 'native');
         if (mounted) setWalletXlm(native ? parseFloat(native.balance) : 0);
 
-        // Vault user balance (Soroban contract) - may be zero if never deposited
+        // Vault user balance using DeFindex contract bindings
+        const { getVaultBalance } = await import('@/lib/vault-transactions');
         const vb = await getVaultBalance(address);
         if (mounted) setVaultXlm(parseFloat(vb || '0'));
       } catch (e: any) {

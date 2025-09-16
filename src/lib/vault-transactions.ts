@@ -92,6 +92,44 @@ export async function depositToVault(userAddress: string, amount: string): Promi
 }
 
 /**
+ * Withdraw from vault - EXACT Tansu pattern using generated contract bindings
+ */
+export async function withdrawFromVault(userAddress: string, xlmAmount: string, slippagePercent: number = 5): Promise<string> {
+  // Get client like Tansu does (EXACT pattern from ContractService.ts)
+  const client = await getClient();
+
+  // First, get user's current shares to calculate how many to burn
+  const userShares = await client.balance({ id: userAddress });
+  const sharesBalance = Number(userShares.result) / 10_000_000; // Convert from i128 to readable
+  
+  if (sharesBalance === 0) {
+    throw new Error("No vault shares to withdraw");
+  }
+
+  // For simplicity, if xlmAmount equals their total balance, withdraw all shares
+  // Otherwise, calculate proportional shares to burn
+  const userBalance = await getVaultBalance(userAddress);
+  const shareRatio = parseFloat(xlmAmount) / parseFloat(userBalance);
+  const sharesToBurn = Math.floor(shareRatio * sharesBalance * 10_000_000).toString(); // Convert back to i128
+
+  // Calculate minimum amounts out with slippage protection
+  const minAmountOut = Math.floor(parseFloat(xlmAmount) * (1 - slippagePercent / 100) * 10_000_000).toString();
+  
+  // Get assembled transaction like Tansu does (client.commit, client.vote, etc.)
+  const assembledTx = await client.withdraw({
+    withdraw_shares: sharesToBurn,
+    min_amounts_out: [minAmountOut],
+    from: userAddress
+  });
+
+  // Check for simulation errors (EXACT Tansu pattern)
+  checkSimulationError(assembledTx as any);
+
+  // Submit transaction (EXACT Tansu pattern)
+  return await submitTransaction(assembledTx);
+}
+
+/**
  * Get vault total balance using contract binding
  */
 export async function getVaultTotalBalance(): Promise<string> {

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getVaultTotalBalance } from '@/lib/stellar';
 import { getXlmFiatRate } from '@/lib/fiat-currencies';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
 
@@ -26,6 +25,8 @@ export const useVaultTVL = (): VaultTVLData => {
       setLoading(true);
       setError(null);
       try {
+        // Use DeFindex contract bindings to get actual vault TVL
+        const { getVaultTotalBalance } = await import('@/lib/vault-transactions');
         const vaultBalance = await getVaultTotalBalance();
         if (mounted) setTotalXlm(parseFloat(vaultBalance || '0'));
       } catch (e: any) {

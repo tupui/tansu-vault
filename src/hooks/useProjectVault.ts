@@ -56,15 +56,18 @@ export const useProjectVault = (
       setError(null);
 
       try {
-        // Load vault stats for this project
-        const vaultStats = await getProjectVaultStats(projectWalletAddress);
+        // Load project's vault balance using DeFindex contract bindings
+        const { getVaultBalance } = await import('@/lib/vault-transactions');
+        const projectVaultBalance = await getVaultBalance(projectWalletAddress);
         
         // Load project wallet balance from Horizon
         const balances = await getAccountBalances(projectWalletAddress);
         const nativeBalance = balances.find((b: any) => b.asset_type === 'native');
         
         if (mounted) {
-          setVaultBalance(parseFloat(vaultStats.vaultBalance || '0'));
+          // This shows the project's share balance in the vault (their treasury in the vault)
+          setVaultBalance(parseFloat(projectVaultBalance || '0'));
+          // This shows the project's regular wallet balance
           setWalletBalance(nativeBalance ? parseFloat(nativeBalance.balance) : 0);
         }
       } catch (err: any) {

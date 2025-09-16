@@ -264,19 +264,9 @@ export const depositToVault = async (userAddress: string, amount: string): Promi
 };
 
 export const withdrawFromVault = async (userAddress: string, xlmAmount: string, slippagePercent: number = 5): Promise<string> => {
-  try {
-    const { getDeFindexService } = await import('./defindex-service');
-    const defindexService = getDeFindexService('testnet');
-    
-    // Calculate how many shares to burn for the given XLM amount
-    const sharesToBurn = await defindexService.calculateSharesToBurn(xlmAmount);
-    
-    // Handle the complete withdrawal flow (simulate, sign, submit)
-    const hash = await defindexService.withdraw(userAddress, sharesToBurn, slippagePercent);
-    return hash;
-  } catch (error) {
-    throw new Error(`Withdrawal failed: ${sanitizeError(error)}`);
-  }
+  // Use the new Tansu-style withdraw function
+  const { withdrawFromVault: withdraw } = await import('./vault-transactions');
+  return await withdraw(userAddress, xlmAmount, slippagePercent);
 };
 
 export const getVaultTotalBalance = async (): Promise<string> => {
