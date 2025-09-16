@@ -202,14 +202,11 @@ export async function getVaultBalance(userAddress: string): Promise<string> {
       // Use the assembled transaction's result property which handles XDR decoding
       const resultWrapper = assembledTx.result;
       
-      // The result might be wrapped in a Result type, handle both cases
+      // The result is a bigint representing user's shares balance
       let shares = 0;
-      if (resultWrapper !== null && resultWrapper !== undefined) {
-        if (typeof resultWrapper === 'object' && 'isOk' in resultWrapper) {
-          shares = Number((resultWrapper as any)!.unwrap());
-        } else {
-          shares = Number(resultWrapper);
-        }
+      if (resultWrapper != null) {
+        // For balance queries, the result is directly a bigint, not a Result wrapper
+        shares = Number(resultWrapper);
       }
       
       // Convert from i128 to readable amount (shares)
