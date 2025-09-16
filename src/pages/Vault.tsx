@@ -1,184 +1,195 @@
+import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProjectSearch } from '@/components/ProjectSearch';
 import { VaultOperations } from '@/components/VaultOperations';
-import { useVaultData } from '@/hooks/useVaultData';
-import { useVaultTVL } from '@/hooks/useVaultTVL';
-import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
-import { formatFiatAmount } from '@/lib/fiat-currencies';
-import { useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { useNetwork } from '@/contexts/NetworkContext';
-import { createProjectService } from '@/lib/soroban-contract-services';
-import type { TansuProject } from '@/lib/tansu-contracts';
+import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
+import { useProjectVault } from '@/hooks/useProjectVault';
+import { TansuProject } from '@/lib/tansu-contracts';
 
-export const Vault = () => {
-  const { getCurrentCurrency } = useFiatCurrency();
-  const currentCurrency = getCurrentCurrency();
-  const { address: connectedWallet, isConnected } = useWallet();
-  const { network } = useNetwork();
-
-  // Read any previously selected project (set in Dashboard's ProjectSearch)
+const Vault: React.FC = () => {
+  const { isConnected, address } = useWallet();
+  const { quoteCurrency } = useFiatCurrency();
   const [selectedProject, setSelectedProject] = useState<TansuProject | null>(null);
   const [projectWalletAddress, setProjectWalletAddress] = useState<string | null>(null);
-  const [isMaintainer, setIsMaintainer] = useState<boolean | null>(null);
-  const [checkingMaintainer, setCheckingMaintainer] = useState(false);
+  
+  const projectVaultData = useProjectVault(selectedProject, projectWalletAddress, address);
 
-  useEffect(() => {
-    try {
-      const p = localStorage.getItem('selectedProject');
-      const w = localStorage.getItem('selectedProjectWalletAddress');
-      setSelectedProject(p ? JSON.parse(p) : null);
-      setProjectWalletAddress(w || null);
-    } catch {
-      setSelectedProject(null);
-      setProjectWalletAddress(null);
-    }
-  }, []);
+  const handleProjectSelect = (project: TansuProject, walletAddress: string) => {
+    setSelectedProject(project);
+    setProjectWalletAddress(walletAddress);
+  };
 
-  // Load maintainer status when project + wallet connected
-  useEffect(() => {
-    const check = async () => {
-      if (!selectedProject || !isConnected || !connectedWallet) {
-        setIsMaintainer(null);
-        return;
-      }
-      setCheckingMaintainer(true);
-      try {
-        const service = createProjectService(network);
-        const ok = await service.isMaintainer(selectedProject.id, connectedWallet);
-        setIsMaintainer(!!ok);
-      } catch {
-        setIsMaintainer(false);
-      } finally {
-        setCheckingMaintainer(false);
-      }
-    };
-    check();
-  }, [selectedProject, isConnected, connectedWallet, network]);
+  const fmt = (num: number | null) => num == null ? '0' : new Intl.NumberFormat().format(num);
+  const fmtFiat = (amount: number | null) => amount == null ? '-' : new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: quoteCurrency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 
-  // Common TVL (read-only, independent of project selection)
-  const tvl = useVaultTVL();
-
-  // User and vault balances (only relevant when a project is selected)
-  const { walletXlm, vaultXlm, totalFiatValue } = useVaultData();
-  const totalXlm = useMemo(() => (walletXlm ?? 0) + (vaultXlm ?? 0), [walletXlm, vaultXlm]);
-
-  const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 }));
-  const fmtFiat = (n: number | null | undefined) => (n == null ? '—' : formatFiatAmount(n, currentCurrency));
-
-  const canManageVault = !!(selectedProject && isConnected && isMaintainer);
+  const canManageVault = selectedProject && isConnected && projectVaultData.isMaintainer;
 
   return (
     <Layout>
       <Navigation />
-      <div className="pt-20 px-6">
-        <div className="container mx-auto max-w-5xl space-y-6">
-          <h1 className="text-3xl font-bold">Vault</h1>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">Project Vault Management</h1>
+          <p className="text-muted-foreground text-lg">
+            Search for Tansu projects and manage their treasury vaults
+          </p>
+        </div>
 
-          {/* Always show common vault TVL */}
-          <Card className="glass border-border/50">
-            <CardHeader>
-              <CardTitle>Common Vault TVL</CardTitle>
-              <CardDescription>Total value locked across the common vault</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total XLM</p>
-                  <p className="text-lg font-semibold">{fmt(tvl.totalXlm)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">XLM Price ({currentCurrency.code})</p>
-                  <p className="text-lg font-semibold">{tvl.xlmFiatRate == null ? '—' : tvl.xlmFiatRate.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total ({currentCurrency.code})</p>
-                  <p className="text-lg font-semibold">{fmtFiat(tvl.totalFiatValue)}</p>
-                </div>
-              </div>
-              {tvl.error && (
-                <div className="mt-3 text-sm text-destructive">{tvl.error}</div>
-              )}
-            </CardContent>
-          </Card>
+        <ProjectSearch 
+          onProjectSelect={handleProjectSelect}
+          selectedProject={selectedProject}
+        />
 
-          {/* If no project selected, stop here (read-only) */}
-          {!selectedProject && (
-            <Card className="glass border-border/50">
+        {selectedProject ? (
+          <div className="space-y-6">
+            {/* Project Details */}
+            <Card>
               <CardHeader>
-                <CardTitle>Project Not Selected</CardTitle>
-                <CardDescription>
-                  Select a Tansu project from the Dashboard to manage its treasury. Deposits and withdrawals are disabled until a project is selected.
-                </CardDescription>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{selectedProject.name}</span>
+                  {projectVaultData.loading ? (
+                    <span className="text-sm text-muted-foreground">Loading...</span>
+                  ) : projectVaultData.isMaintainer ? (
+                    <span className="text-sm text-green-600 font-medium">✓ Maintainer Access</span>
+                  ) : isConnected ? (
+                    <span className="text-sm text-red-600 font-medium">✗ No Access</span>
+                  ) : null}
+                </CardTitle>
               </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Description</p>
+                    <p className="text-foreground">{selectedProject.description}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Domain</p>
+                    <p className="text-foreground font-mono">{selectedProject.domain}</p>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
-          )}
 
-          {/* When a project is selected, show balances and operations based on maintainer status */}
-          {selectedProject && (
-            <>
-              <Card className="glass border-border/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {selectedProject.name}
-                    <Badge variant="outline" className="border-border/60">{selectedProject.domain}</Badge>
-                  </CardTitle>
-                  <CardDescription>Manage deposits and withdrawals for this project treasury</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Wallet (XLM)</p>
-                      <p className="text-lg font-semibold">{fmt(walletXlm)}</p>
+            {/* Vault Balance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Vault Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {projectVaultData.loading ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">Loading vault data...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Total Balance</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {fmt(projectVaultData.totalBalance)} XLM
+                      </p>
+                      <p className="text-muted-foreground">
+                        {fmtFiat(projectVaultData.totalFiatValue)}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">In Vault (XLM)</p>
-                      <p className="text-lg font-semibold">{fmt(vaultXlm)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total ({currentCurrency.code})</p>
-                      <p className="text-lg font-semibold">{fmtFiat(totalFiatValue)}</p>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Vault Balance</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {fmt(projectVaultData.vaultBalance)} XLM
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {fmtFiat(projectVaultData.vaultBalance && projectVaultData.xlmFiatRate ? projectVaultData.vaultBalance * projectVaultData.xlmFiatRate : null)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {fmt(projectVaultData.walletBalance)} XLM
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {fmtFiat(projectVaultData.walletBalance && projectVaultData.xlmFiatRate ? projectVaultData.walletBalance * projectVaultData.xlmFiatRate : null)}
+                        </p>
+                      </div>
                     </div>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Vault Operations - Only for maintainers */}
+            {canManageVault && (
+              <VaultOperations 
+                userBalance={(projectVaultData.walletBalance || 0).toString()}
+                vaultBalance={(projectVaultData.vaultBalance || 0).toString()}
+              />
+            )}
+
+            {/* Access Required Message */}
+            {selectedProject && isConnected && !projectVaultData.isMaintainer && !projectVaultData.loading && (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                    Access Required
+                  </h3>
+                  <p className="text-muted-foreground">
+                    You need to be a maintainer of this project to manage its vault.
+                  </p>
                 </CardContent>
               </Card>
+            )}
 
-              {/* Maintainer gate */}
-              {!isConnected && (
-                <Card className="glass border-border/50">
-                  <CardContent className="p-6 text-sm text-muted-foreground">Connect your wallet to check maintainer permissions.</CardContent>
-                </Card>
-              )}
+            {/* Connect Wallet Message */}
+            {selectedProject && !isConnected && (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Connect Your Wallet
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Connect your wallet to check if you have access to manage this project's vault.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-              {isConnected && checkingMaintainer && (
-                <Card className="glass border-border/50">
-                  <CardContent className="p-6 text-sm text-muted-foreground">Checking maintainer status…</CardContent>
-                </Card>
-              )}
-
-              {isConnected && !checkingMaintainer && !canManageVault && (
-                <Card className="glass border-border/50">
-                  <CardContent className="p-6">
-                    <p className="text-sm text-muted-foreground">
-                      Your connected wallet is not a maintainer of {selectedProject.name}. Vault operations are disabled.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {canManageVault && (
-                <VaultOperations
-                  userBalance={(walletXlm ?? 0).toString()}
-                  vaultBalance={(vaultXlm ?? 0).toString()}
-                  onOperationComplete={() => { /* no-op for now */ }}
-                />
-              )}
-            </>
-          )}
-        </div>
+            {/* Recent Activity Placeholder */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    Activity tracking coming soon...
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+                No Project Selected
+              </h3>
+              <p className="text-muted-foreground">
+                Search for and select a Tansu project to view and manage its vault.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </Layout>
   );
 };
+
+export default Vault;
