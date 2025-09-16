@@ -5,6 +5,7 @@ export interface NetworkConfig {
   networkPassphrase: string;
   sorobanDomainContract?: string;
   tansuProjectContract?: string;
+  vaultContract?: string;
 }
 
 export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
@@ -15,6 +16,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     networkPassphrase: 'Public Global Stellar Network ; September 2015',
     sorobanDomainContract: 'CATRNPHYKNXAPNLHEYH55REB6YSAJLGCPA4YM6L3WUKSZOPI77M2UMKI',
     tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
+    vaultContract: '', // TODO: Add mainnet vault contract address
   },
   testnet: {
     name: 'testnet',
@@ -23,6 +25,7 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     networkPassphrase: 'Test SDF Network ; September 2015',
     sorobanDomainContract: 'CAQWEZNN5X7LFD6PZBQXALVH4LSJW2KGNDMFJBQ3DWHXUVQ2JIZ6AQU6',
     tansuProjectContract: 'CBCXMB3JKKDOYHMBIBH3IQDPVCLHV4LQPCYA2LPKLLQ6JNJHAYPCUFAN',
+    vaultContract: 'CCGKL6U2DHSNFJ3NU4UPRUKYE2EUGYR4ZFZDYA7KDJLP3TKSPHD5C4UP',
   }
 };
 
@@ -39,6 +42,7 @@ export const getContractAddresses = (network: string = 'testnet') => {
   return {
     TANSU_PROJECT: config.tansuProjectContract || '',
     SOROBAN_DOMAIN: config.sorobanDomainContract || '',
+    VAULT: config.vaultContract || '',
   };
 };
 

@@ -317,18 +317,13 @@ export const withdrawFromVault = async (userAddress: string, amount: string): Pr
 
 export const getVaultTotalBalance = async (): Promise<string> => {
   try {
-    // Temporarily return "0" until we have proper contract integration
-    // The error shows the transaction format is incorrect for Soroban RPC
-    console.warn('Vault total balance query temporarily disabled due to RPC format issues');
-    return "0";
-    
-    /* TODO: Fix transaction format for Soroban RPC
-    const contracts = getContractAddresses();
-    const contract = new Contract(contracts.XLM_HODL_VAULT);
+    const { getContractAddresses } = await import('./appConfig');
+    const contracts = getContractAddresses('testnet');
+    const contract = new Contract(contracts.VAULT);
     
     // Need to create proper transaction, not just operation
     const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const op = contract.call('get_total_managed_funds');
+    const op = contract.call('total_supply');
     
     const transaction = new TransactionBuilder(sourceAccount, {
       fee: '100',
@@ -341,15 +336,16 @@ export const getVaultTotalBalance = async (): Promise<string> => {
     const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      throw new Error(`Vault query error: ${sim.error}`);
+      console.warn(`Vault total balance query error: ${sim.error}`);
+      return "0";
     }
 
     const retval = sim.result?.retval as xdr.ScVal | undefined;
     if (!retval) return "0";
 
     const result = scValToNative(retval);
-    return formatAssetAmount(result.toString());
-    */
+    const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
+    return balance.toString();
   } catch (error) {
     console.error('Failed to get vault total balance:', error);
     return "0";
@@ -358,18 +354,13 @@ export const getVaultTotalBalance = async (): Promise<string> => {
 
 export const getVaultBalance = async (userAddress: string): Promise<string> => {
   try {
-    // Temporarily return "0" until we have proper contract integration
-    // The error shows the transaction format is incorrect for Soroban RPC
-    console.warn('Vault user balance query temporarily disabled due to RPC format issues');
-    return "0";
-    
-    /* TODO: Fix transaction format for Soroban RPC
-    const contracts = getContractAddresses();
-    const contract = new Contract(contracts.XLM_HODL_VAULT);
+    const { getContractAddresses } = await import('./appConfig');
+    const contracts = getContractAddresses('testnet');
+    const contract = new Contract(contracts.VAULT);
     
     // Need to create proper transaction, not just operation
     const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-    const op = contract.call('get_user_balance', nativeToScVal(userAddress, { type: 'address' }));
+    const op = contract.call('balance', nativeToScVal(userAddress, { type: 'address' }));
     
     const transaction = new TransactionBuilder(sourceAccount, {
       fee: '100',
@@ -382,15 +373,16 @@ export const getVaultBalance = async (userAddress: string): Promise<string> => {
     const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      throw new Error(`Vault balance query error: ${sim.error}`);
+      console.warn(`Vault user balance query error: ${sim.error}`);
+      return "0";
     }
 
     const retval = sim.result?.retval as xdr.ScVal | undefined;
     if (!retval) return "0";
 
     const result = scValToNative(retval);
-    return formatAssetAmount(result.toString());
-    */
+    const balance = parseFloat(result.toString()) / 10_000_000; // Convert from stroops
+    return balance.toString();
   } catch (error) {
     console.error('Failed to get vault user balance:', error);
     return "0";

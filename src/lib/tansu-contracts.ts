@@ -120,13 +120,10 @@ export async function getProjectVaultStats(projectId: string, network: 'mainnet'
     const contracts = getContractAddresses(network);
     const config = getNetworkConfig(network);
     const rpcServer = new SorobanServer(config.sorobanRpcUrl);
-    const contract = new Contract(contracts.TANSU_PROJECT);
+    const contract = new Contract(contracts.VAULT);
     
-    // Call the project contract to get vault balance for this project
-    const op = contract.call(
-      'get_project_vault_balance', 
-      nativeToScVal(projectId, { type: 'string' })
-    );
+    // Get total vault supply
+    const totalSupplyOp = contract.call('total_supply');
     
     // Build a proper transaction for simulation
     const sourceAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
@@ -134,14 +131,14 @@ export async function getProjectVaultStats(projectId: string, network: 'mainnet'
       fee: '100',
       networkPassphrase: config.networkPassphrase,
     })
-    .addOperation(op)
+    .addOperation(totalSupplyOp)
     .setTimeout(30)
     .build();
     
     const sim: any = await rpcServer.simulateTransaction(transaction);
     
     if ('error' in sim) {
-      console.warn(`Project vault balance query error: ${sim.error}`);
+      console.warn(`Vault total supply query error: ${sim.error}`);
       return {
         vaultBalance: '0',
         walletBalance: '0',
@@ -165,7 +162,7 @@ export async function getProjectVaultStats(projectId: string, network: 'mainnet'
     
     return {
       vaultBalance: balance.toString(),
-      walletBalance: '0', // Would need separate call
+      walletBalance: '0', // Would need separate call with domain address
       totalDeposited: balance.toString(), // Simplified
       yieldEarned: '0' // Would need yield calculation
     };
