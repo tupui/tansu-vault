@@ -124,9 +124,17 @@ export const getWalletsByType = (type: WalletConfig['type']): WalletConfig[] => 
  * Get available wallets (those that can be detected)
  */
 export const getAvailableWallets = (): WalletConfig[] => {
-  return Object.values(WALLET_CONFIGS).filter(wallet => 
-    !wallet.detectAvailability || wallet.detectAvailability()
-  );
+  return Object.values(WALLET_CONFIGS).filter(wallet => {
+    // Only show wallets that are actually supported and detected
+    const detected = !wallet.detectAvailability || wallet.detectAvailability();
+    
+    // For xBull, check if it's actually installed properly
+    if (wallet.id === 'xbull') {
+      return detected && typeof window !== 'undefined' && (window as any).xBullWalletConnect;
+    }
+    
+    return detected;
+  });
 };
 
 /**

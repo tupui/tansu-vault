@@ -50,13 +50,34 @@ export const useWalletState = (): WalletContextType => {
 
   // Initialize wallet kit and restore connection
   useEffect(() => {
-    const savedAddress = localStorage.getItem('tansu_wallet_address');
-    const savedWalletId = localStorage.getItem('tansu_wallet_id');
-    if (savedAddress && savedWalletId) {
-      setAddress(savedAddress);
-      refreshBalances(savedAddress);
-    }
-  }, []);
+    const restoreConnection = async () => {
+      const savedAddress = localStorage.getItem('tansu_wallet_address');
+      const savedWalletId = localStorage.getItem('tansu_wallet_id');
+      
+      if (savedAddress && savedWalletId) {
+        try {
+          // Initialize wallet kit first
+          const targetNetwork: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';
+          try {
+            switchNetwork(targetNetwork);
+          } catch {
+            initWalletKit(targetNetwork);
+          }
+          
+          // Restore the address without triggering a new connection
+          setAddress(savedAddress);
+          await refreshBalances(savedAddress);
+        } catch (error) {
+          console.warn('Failed to restore wallet connection:', error);
+          // Clear invalid saved data
+          localStorage.removeItem('tansu_wallet_address');
+          localStorage.removeItem('tansu_wallet_id');
+        }
+      }
+    };
+
+    restoreConnection();
+  }, [network]);
 
   useEffect(() => {
     const target: NetworkType = network === 'mainnet' ? 'MAINNET' : 'TESTNET';

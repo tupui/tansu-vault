@@ -41,15 +41,21 @@ export const FiatCurrencyProvider = ({ children }: FiatCurrencyProviderProps) =>
       try {
         const currencies = await getAvailableFiatCurrencies(network === 'mainnet' ? 'mainnet' : 'testnet');
         setAvailableCurrencies(currencies);
+        
+        // Ensure the current currency is still available
+        if (quoteCurrency && !currencies.some(c => c.code === quoteCurrency)) {
+          setQuoteCurrency('USD'); // Default to USD if current currency not available
+        }
       } catch (error) {
         console.error('Failed to load fiat currencies:', error);
         // Set minimal fallback
         setAvailableCurrencies([{ code: 'USD', symbol: '$', name: 'US Dollar' }]);
+        setQuoteCurrency('USD');
       }
     };
 
     loadCurrencies();
-  }, [network]);
+  }, [network, quoteCurrency]);
 
   const getCurrentCurrency = (): FiatCurrency => {
     return availableCurrencies.find(c => c.code === quoteCurrency) || 

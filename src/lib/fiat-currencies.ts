@@ -46,51 +46,58 @@ const CURRENCY_INFO: Record<string, { symbol: string; name: string }> = {
  */
 export async function getAvailableFiatCurrencies(network: 'mainnet' | 'testnet' = 'testnet'): Promise<FiatCurrency[]> {
   try {
-    // Get all supported fiat currencies from FX Oracle
-    const { getAssetPrice } = await import('@/lib/reflector');
+    // Get oracle client for the network
+    const { getOracleClient } = await import('@/lib/reflector-client');
+    const oracleClient = getOracleClient(network);
     
-    // Test a few major currencies to see what's available
-    const testCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'SEK', 'NZD', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'BRL', 'MXN', 'INR', 'KRW', 'SGD', 'HKD', 'TWD', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'ZAR'];
-    
-    const availableCurrencies: FiatCurrency[] = [];
-    
-    // Test which currencies are actually supported by trying to get a rate
-    for (const code of testCurrencies) {
-      try {
-        const rate = await getAssetPrice('XLM', code, network);
-        if (rate && rate > 0) {
-          availableCurrencies.push({
-            code,
-            symbol: CURRENCY_INFO[code]?.symbol || code,
-            name: CURRENCY_INFO[code]?.name || code,
-          });
-        }
-      } catch {
-        // Currency not supported, skip
-      }
+    // Try to get supported currencies directly from FX oracle
+    let supportedCurrencies: string[] = [];
+    try {
+      supportedCurrencies = await oracleClient.listSupportedCurrencies();
+    } catch (error) {
+      console.warn('Failed to fetch supported currencies from oracle:', error);
     }
-    
-    // If we found supported currencies, return them, otherwise use fallback
-    if (availableCurrencies.length > 0) {
-      return availableCurrencies.sort((a, b) => a.code.localeCompare(b.code));
+
+    // If we got currencies from oracle, convert them to FiatCurrency objects
+    if (supportedCurrencies && supportedCurrencies.length > 0) {
+      const currencies = supportedCurrencies.map(code => {
+        const info = CURRENCY_INFO[code];
+        return {
+          code: code,
+          symbol: info?.symbol || code,
+          name: info?.name || code
+        };
+      });
+
+      // Ensure USD is always first if present
+      currencies.sort((a, b) => {
+        if (a.code === 'USD') return -1;
+        if (b.code === 'USD') return 1;
+        return a.code.localeCompare(b.code);
+      });
+
+      return currencies;
     }
-    
-    // Fallback to essential currencies
-    return [
+
+    // Fallback to essential currencies if oracle returns empty or fails
+    const essentialCurrencies: FiatCurrency[] = [
       { code: 'USD', symbol: '$', name: 'US Dollar' },
       { code: 'EUR', symbol: '€', name: 'Euro' },
       { code: 'GBP', symbol: '£', name: 'British Pound' },
-      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' }
     ];
+
+    return essentialCurrencies;
     
   } catch (error) {
-    console.error('Failed to load currencies from oracle:', error);
-    // Return minimal fallback
+    console.error('Error fetching available fiat currencies:', error);
+    
+    // Return minimal fallback list
     return [
       { code: 'USD', symbol: '$', name: 'US Dollar' },
       { code: 'EUR', symbol: '€', name: 'Euro' },
       { code: 'GBP', symbol: '£', name: 'British Pound' },
-      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' }
     ];
   }
 }

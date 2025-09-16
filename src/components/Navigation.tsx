@@ -4,7 +4,7 @@ import { CurrencySelector } from './CurrencySelector';
 import { Vault, Leaf, Settings, BarChart3 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { StratumWalletModal } from './StratumWalletModal';
+import { StratumWalletModalLight } from './StratumWalletModalLight';
 import { useWallet } from '@/hooks/useWallet';
 import { useNetwork } from '@/contexts/NetworkContext';
 import { useFiatCurrency } from '@/contexts/FiatCurrencyContext';
@@ -136,7 +136,7 @@ export const Navigation = () => {
       </div>
 
       {/* Stratum Wallet Modal */}
-      <StratumWalletModal 
+      <StratumWalletModalLight 
         open={showWalletModal} 
         onOpenChange={setShowWalletModal} 
       />
